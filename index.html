@@ -414,7 +414,7 @@ Vorgaben:
 - "zeit" = Sekunden zum Antworten (20 für einfache, 30 für Rechen- oder Leseaufgaben).
 - "richtig" = Position der richtigen Antwort, gezählt ab 0.
 
-Gib ausschliesslich JSON in genau diesem Format zurück, ohne weiteren Text:
+Gib ausschliesslich JSON in einem einzigen \`\`\`json-Codeblock zurück, ohne weiteren Text, in genau diesem Format:
 {"titel":"...","fragen":[{"frage":"...","antworten":["...","...","...","..."],"richtig":0,"zeit":20}]}
 
 Text:
@@ -441,11 +441,25 @@ function normalizeQuiz(raw){
   });
   return { title: raw.title || raw.titel || '', questions: qs };
 }
+function bereinigeJson(text) {
+  let t = text
+    .replace(/```(json)?/gi, '')
+    .replace(/[“”„‟«»]/g, '"')
+    .replace(/[‘’]/g, "'")
+    .trim();
+  const start = t.indexOf('{');
+  const ende = t.lastIndexOf('}');
+  if (start !== -1 && ende > start) t = t.slice(start, ende + 1);
+  return t;
+}
 function extractJson(txt){
-  const s = Math.min(...['{','['].map(ch => { const k = txt.indexOf(ch); return k<0?Infinity:k; }));
-  const e = Math.max(txt.lastIndexOf('}'), txt.lastIndexOf(']'));
-  if (s === Infinity || e < s) throw new Error('Kein JSON gefunden.');
-  return JSON.parse(txt.slice(s, e+1));
+  // 1. Versuch: nur Codeblock-Markierungen und Begleittext entfernen, Anführungszeichen im Text bleiben erhalten
+  let t = txt.replace(/```(json)?/gi, '').trim();
+  const s = t.indexOf('{'), e = t.lastIndexOf('}');
+  if (s !== -1 && e > s) t = t.slice(s, e + 1);
+  try { return JSON.parse(t); } catch(e1) {}
+  // 2. Versuch: zusätzlich typografische Anführungszeichen ersetzen
+  return JSON.parse(bereinigeJson(txt));
 }
 function importAi(replace){
   const err = $('#aiErr'); err.textContent = '';
@@ -455,7 +469,7 @@ function importAi(replace){
     else Q.questions = Q.questions.filter(x => x.q.trim()).concat(nq.questions);
     $('#aiIn').value = ''; renderQs();
     err.style.color = 'var(--ok)'; err.textContent = '✓ ' + nq.questions.length + ' Fragen übernommen. Unten prüfen und anpassen.';
-  } catch(e) { err.style.color = ''; err.textContent = 'Import fehlgeschlagen: ' + e.message; }
+  } catch(e) { err.style.color = ''; err.textContent = 'Import fehlgeschlagen: ' + e.message + ' Tipp: Antwort über den Kopier-Button des Codeblocks kopieren, nicht durch Markieren.'; }
 }
 function download(name, text, type){ const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([text],{type})); a.download=name; a.click(); setTimeout(()=>URL.revokeObjectURL(a.href),2000); }
 const fname = s => (s||'quiz').replace(/[^\wäöüÄÖÜ -]/g,'').trim().replace(/\s+/g,'_') || 'quiz';
