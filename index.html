@@ -1,0 +1,702 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Klassenquiz</title>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<style>
+:root{
+  --bg:#1b1640; --bg2:#262056; --card:#ffffff; --ink:#1d1d2b; --muted:#6b6b80; --line:#e3e3ee;
+  --accent:#6c4cff; --ok:#1fa35b; --bad:#d8344a;
+  --a0:#e21b3c; --a1:#1368ce; --a2:#d89e00; --a3:#26890c;
+  --r:14px;
+}
+*{box-sizing:border-box}
+html,body{margin:0;min-height:100%}
+body{background:linear-gradient(160deg,var(--bg),var(--bg2));color:#fff;font:16px/1.4 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+.view{min-height:100vh;padding:24px 16px;display:flex;flex-direction:column;align-items:center}
+.view[hidden]{display:none}
+.wrap{width:100%;max-width:980px}
+h1{font-size:28px;margin:0 0 6px} h2{font-size:22px;margin:0 0 12px}
+.sub{color:#c9c4f2;margin:0 0 18px}
+.card{background:var(--card);color:var(--ink);border-radius:var(--r);padding:18px;margin-bottom:14px;box-shadow:0 6px 24px rgba(0,0,0,.25)}
+.card h3{margin:0 0 10px;font-size:17px}
+label{font-weight:600;font-size:14px;display:block;margin:10px 0 4px}
+input[type=text],input[type=number],textarea,select{width:100%;padding:10px 12px;border:1.5px solid var(--line);border-radius:10px;font:inherit;color:var(--ink);background:#fff}
+textarea{min-height:90px;resize:vertical}
+input:focus,textarea:focus,select:focus{outline:none;border-color:var(--accent)}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;border:0;border-radius:10px;padding:11px 18px;font:600 15px/1 inherit;cursor:pointer;background:var(--accent);color:#fff}
+.btn:hover{filter:brightness(1.08)} .btn:disabled{opacity:.5;cursor:default}
+.btn.ghost{background:#eeeaff;color:var(--accent)}
+.btn.light{background:rgba(255,255,255,.14);color:#fff}
+.btn.danger{background:#fde8eb;color:var(--bad)}
+.btn.big{font-size:20px;padding:16px 28px}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.row.end{justify-content:flex-end}
+.grow{flex:1}
+.small{font-size:13px;color:var(--muted)}
+.mt{margin-top:12px}
+code,pre{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:13px}
+pre{background:#f4f3fa;padding:10px;border-radius:8px;white-space:pre-wrap;word-break:break-all;margin:6px 0}
+ol.steps li{margin-bottom:8px}
+/* editor */
+.q{border:1.5px solid var(--line);border-radius:12px;padding:12px;margin-bottom:12px}
+.qhead{display:flex;gap:8px;align-items:center;margin-bottom:8px}
+.qnum{font-weight:700;color:var(--accent)}
+.ans{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px}
+.ansin{display:flex;align-items:center;gap:6px;border-radius:10px;padding:4px 6px 4px 8px}
+.ansin input[type=text]{border:0;padding:8px}
+.ansin input[type=radio]{width:20px;height:20px;accent-color:#fff}
+.c0{background:var(--a0)}.c1{background:var(--a1)}.c2{background:var(--a2)}.c3{background:var(--a3)}
+.shape{color:#fff;font-size:18px;width:22px;text-align:center}
+.iconbtn{background:#f1f0f8;border:0;border-radius:8px;width:34px;height:34px;cursor:pointer;font-size:15px}
+.iconbtn:hover{background:#e4e1f6}
+.tabs{display:flex;gap:6px;margin-bottom:12px}
+.tabs button{border:0;background:#f1f0f8;color:var(--ink);padding:9px 14px;border-radius:9px;font:600 14px inherit;cursor:pointer}
+.tabs button.on{background:var(--accent);color:#fff}
+.err{color:var(--bad);font-weight:600}
+/* lobby */
+.lobby{display:grid;grid-template-columns:auto 1fr;gap:28px;align-items:start;width:100%;max-width:1200px}
+#qr{background:#fff;padding:14px;border-radius:var(--r);display:inline-block}
+.code{font-size:56px;font-weight:800;letter-spacing:6px}
+.players{display:flex;flex-wrap:wrap;gap:10px;margin-top:14px}
+.chip{background:rgba(255,255,255,.15);padding:9px 14px;border-radius:999px;font-weight:700;font-size:18px;cursor:pointer;animation:pop .25s}
+.chip:hover{background:var(--bad)}
+@keyframes pop{from{transform:scale(.6);opacity:0}to{transform:scale(1);opacity:1}}
+/* host question */
+.qtext{background:#fff;color:var(--ink);border-radius:var(--r);padding:22px;font-size:34px;font-weight:700;text-align:center;width:100%;max-width:1200px}
+.mid{display:flex;justify-content:space-between;align-items:center;width:100%;max-width:1200px;margin:20px 0}
+.timer{width:110px;height:110px;border-radius:50%;background:var(--accent);display:flex;align-items:center;justify-content:center;font-size:44px;font-weight:800}
+.counter{text-align:center;font-size:20px}
+.counter b{display:block;font-size:44px}
+.hans{display:grid;grid-template-columns:1fr 1fr;gap:14px;width:100%;max-width:1200px}
+.ha{border-radius:var(--r);padding:22px;font-size:26px;font-weight:700;display:flex;align-items:center;gap:14px;min-height:96px;transition:opacity .3s}
+.ha .shape{font-size:30px;width:34px}
+.ha.dim{opacity:.28}
+.ha .cnt{margin-left:auto;font-size:22px;background:rgba(0,0,0,.2);padding:4px 12px;border-radius:999px}
+.ha .tick{font-size:30px}
+.bar{height:10px;background:rgba(255,255,255,.2);border-radius:5px;overflow:hidden;width:100%;max-width:1200px;margin-top:16px}
+.bar>div{height:100%;background:#fff;transition:width .25s linear}
+/* board */
+.board{width:100%;max-width:800px}
+.brow{display:flex;align-items:center;gap:14px;background:#fff;color:var(--ink);border-radius:12px;padding:14px 18px;margin-bottom:10px;font-size:24px;font-weight:700;animation:pop .3s both}
+.brow .rk{width:40px;color:var(--accent)}
+.brow .nm{flex:1}
+.brow .gain{font-size:16px;color:var(--ok);font-weight:700}
+.podium{display:flex;align-items:flex-end;justify-content:center;gap:16px;margin:24px 0}
+.pod{text-align:center;width:200px}
+.pod .blk{background:#fff;color:var(--ink);border-radius:12px 12px 0 0;display:flex;align-items:center;justify-content:center;font-size:48px;font-weight:800}
+.pod .pn{font-size:24px;font-weight:800;margin-bottom:6px;word-break:break-word}
+.pod .ps{color:#c9c4f2;margin-bottom:8px}
+.hostbar{position:fixed;right:16px;bottom:16px;display:flex;gap:10px}
+/* player */
+.phone{width:100%;max-width:480px;flex:1;display:flex;flex-direction:column}
+.pa{display:grid;grid-template-rows:repeat(4,1fr);gap:10px;flex:1;margin-top:12px}
+.pa button{border:0;border-radius:var(--r);color:#fff;font:700 19px/1.25 inherit;display:flex;align-items:center;gap:12px;padding:14px 16px;text-align:left;cursor:pointer;min-height:70px}
+.pa button .shape{font-size:26px;width:30px}
+.pa button:active{transform:scale(.97)}
+.pq{background:rgba(255,255,255,.12);border-radius:12px;padding:14px;font-size:18px;font-weight:700}
+.center{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:10px}
+.huge{font-size:64px;line-height:1}
+.status{font-size:26px;font-weight:800}
+.result.ok{background:var(--ok)} .result.bad{background:var(--bad)}
+.result{border-radius:var(--r);padding:26px;width:100%}
+.me{position:fixed;top:0;left:0;right:0;display:flex;justify-content:space-between;padding:8px 14px;background:rgba(0,0,0,.25);font-weight:700;font-size:14px}
+.spinner{width:42px;height:42px;border:5px solid rgba(255,255,255,.25);border-top-color:#fff;border-radius:50%;animation:spin 1s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+@media (max-width:760px){
+  .lobby{grid-template-columns:1fr}
+  .ans{grid-template-columns:1fr}
+  .qtext{font-size:22px}.ha{font-size:18px;min-height:64px}
+  .hans{grid-template-columns:1fr}
+}
+</style>
+</head>
+<body>
+
+<!-- ============ EINRICHTUNG ============ -->
+<section class="view" id="setup" hidden><div class="wrap">
+  <h1>Einrichtung (einmalig)</h1>
+  <p class="sub">Damit die Handys der Lernenden mit deinem Laptop kommunizieren können, braucht die App eine kostenlose Firebase-Datenbank von Google.</p>
+  <div class="card">
+    <h3>Schritt für Schritt (ca. 15 Minuten)</h3>
+    <ol class="steps">
+      <li>Öffne <b>console.firebase.google.com</b> und melde dich mit einem Google-Konto an.</li>
+      <li><b>«Projekt erstellen»</b> → Name z.B. <i>klassenquiz</i> → Google Analytics <b>deaktivieren</b> → erstellen.</li>
+      <li>Links im Menü: <b>Build → Realtime Database → «Datenbank erstellen»</b>. Standort: <b>Belgien (europe-west1)</b>. Modus: <b>«Im gesperrten Modus starten»</b>.</li>
+      <li>In der Datenbank den Tab <b>«Regeln»</b> öffnen, alles ersetzen durch den folgenden Text und <b>«Veröffentlichen»</b>:
+<pre id="rulesTxt">{
+  "rules": {
+    ".read": false,
+    ".write": false,
+    "games": {
+      "$code": { ".read": true, ".write": true }
+    }
+  }
+}</pre>
+        <button class="btn ghost" onclick="copyText($('#rulesTxt').textContent,this)">Regeln kopieren</button>
+      </li>
+      <li>Links oben auf das <b>Zahnrad → Projekteinstellungen</b>. Unten bei «Meine Apps» auf das Symbol <b>&lt;/&gt;</b> (Web) klicken → Name eingeben → <b>«App registrieren»</b> (Hosting nicht anhaken).</li>
+      <li>Es erscheint ein Code-Block mit <code>const firebaseConfig = { ... }</code>. Diesen ganzen Block kopieren und hier unten einfügen.</li>
+    </ol>
+  </div>
+  <div class="card">
+    <label for="cfgIn">Firebase-Konfiguration einfügen</label>
+    <textarea id="cfgIn" placeholder='const firebaseConfig = {
+  apiKey: "...",
+  authDomain: "...",
+  databaseURL: "https://...firebasedatabase.app",
+  projectId: "...",
+  ...
+};'></textarea>
+    <p class="small">Fehlt <code>databaseURL</code>? Dann wurde die App vor der Datenbank registriert. Die URL steht oben in der Realtime Database (beginnt mit https:// und endet auf firebasedatabase.app oder firebaseio.com) und kann hier ergänzt werden:</p>
+    <input type="text" id="cfgDb" placeholder="https://klassenquiz-default-rtdb.europe-west1.firebasedatabase.app">
+    <p id="cfgErr" class="err"></p>
+    <div class="row end"><button class="btn" onclick="saveConfig()">Speichern und testen</button></div>
+  </div>
+</div></section>
+
+<!-- ============ EDITOR ============ -->
+<section class="view" id="editor" hidden><div class="wrap">
+  <div class="row"><div class="grow"><h1>Klassenquiz</h1><p class="sub">Fragen erstellen, bearbeiten und live mit der Klasse spielen.</p></div>
+    <button class="btn light" onclick="show('setup')">⚙ Firebase</button></div>
+
+  <div class="card">
+    <div class="row">
+      <div class="grow"><label for="libSel" style="margin-top:0">Gespeicherte Quizze</label>
+        <select id="libSel" onchange="loadQuiz(this.value)"></select></div>
+      <div class="row" style="align-self:flex-end">
+        <button class="btn ghost" onclick="newQuiz()">+ Neu</button>
+        <button class="btn ghost" onclick="dupQuiz()">Duplizieren</button>
+        <button class="btn danger" onclick="delQuiz()">Löschen</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="tabs"><button id="tabAi" class="on" onclick="tab('ai')">1 · Fragen aus Text (KI)</button><button id="tabFile" onclick="tab('file')">Datei importieren / exportieren</button></div>
+    <div id="paneAi">
+      <label for="srcText" style="margin-top:0">Quelltext (z.B. Theorie-Abschnitt, Lernauftrag)</label>
+      <textarea id="srcText" placeholder="Text hier einfügen …" style="min-height:130px"></textarea>
+      <div class="row mt">
+        <label for="nQ" style="margin:0">Anzahl Fragen</label><input type="number" id="nQ" value="10" min="1" max="40" style="width:90px">
+        <label for="lvl" style="margin:0">Niveau</label>
+        <select id="lvl" style="width:auto"><option>Berufsfachschule, 1. Lehrjahr</option><option selected>Berufsfachschule, mittleres Niveau</option><option>Berufsfachschule, anspruchsvoll</option></select>
+        <span class="grow"></span>
+        <button class="btn" onclick="copyPrompt(this)">Auftrag für Claude kopieren</button>
+      </div>
+      <p class="small">Dann in einem Claude-Chat einfügen, Antwort komplett kopieren und unten einfügen.</p>
+      <label for="aiIn">2 · Antwort von Claude einfügen</label>
+      <textarea id="aiIn" placeholder='{"titel": "...", "fragen": [ ... ]}'></textarea>
+      <p id="aiErr" class="err"></p>
+      <div class="row end"><button class="btn ghost" onclick="importAi(false)">Anhängen</button><button class="btn" onclick="importAi(true)">Ersetzen</button></div>
+    </div>
+    <div id="paneFile" hidden>
+      <div class="row">
+        <button class="btn ghost" onclick="exportQuiz()">Quiz als Datei speichern (.json)</button>
+        <label class="btn ghost" style="margin:0">Quiz-Datei laden<input type="file" accept=".json,application/json" hidden onchange="importFile(this)"></label>
+      </div>
+      <p class="small mt">Quizze werden automatisch in diesem Browser gespeichert. Mit der Datei kannst du sie sichern, auf einen anderen Laptop übertragen oder mit Kollegen teilen.</p>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="row"><div class="grow"><label for="qTitle" style="margin-top:0">Titel</label><input type="text" id="qTitle" oninput="Q.title=this.value;save()"></div></div>
+    <div id="qList" class="mt"></div>
+    <div class="row"><button class="btn ghost" onclick="addQ()">+ Frage hinzufügen</button><span class="grow"></span><span class="small" id="qCount"></span></div>
+  </div>
+
+  <p id="startErr" class="err"></p>
+  <div class="row end" style="margin-bottom:40px"><button class="btn big" onclick="startGame()">▶ Spiel starten</button></div>
+</div></section>
+
+<!-- ============ LOBBY ============ -->
+<section class="view" id="lobby" hidden>
+  <div class="lobby">
+    <div style="text-align:center"><div id="qr"></div><div class="small" style="color:#c9c4f2;margin-top:8px">QR-Code scannen</div></div>
+    <div>
+      <h1 id="lobTitle"></h1>
+      <div style="color:#c9c4f2">Spiel-PIN</div><div class="code" id="lobCode"></div>
+      <div class="row mt"><button class="btn light" onclick="copyText(joinURL,this)">Link kopieren</button></div>
+      <h2 class="mt" style="margin-top:28px"><span id="lobN">0</span> Teilnehmende</h2>
+      <div class="small" style="color:#c9c4f2">Namen anklicken, um jemanden zu entfernen.</div>
+      <div class="players" id="lobPlayers"></div>
+    </div>
+  </div>
+  <div class="hostbar"><button class="btn light" onclick="endGame(true)">Abbrechen</button><button class="btn big" id="btnGo" onclick="nextQuestion()">Start ▶</button></div>
+</section>
+
+<!-- ============ HOST: FRAGE / AUFLÖSUNG ============ -->
+<section class="view" id="hq" hidden>
+  <div class="small" id="hqNum" style="color:#c9c4f2;margin-bottom:8px"></div>
+  <div class="qtext" id="hqText"></div>
+  <div class="mid"><div class="timer" id="hqTimer"></div><div id="hqMid" style="flex:1"></div><div class="counter"><b id="hqCount">0</b>Antworten</div></div>
+  <div class="hans" id="hqAns"></div>
+  <div class="bar" id="hqBarWrap"><div id="hqBar"></div></div>
+  <div class="hostbar" id="hqBtns"></div>
+</section>
+
+<!-- ============ HOST: RANGLISTE ============ -->
+<section class="view" id="hboard" hidden>
+  <h1 style="margin-bottom:20px">Rangliste</h1>
+  <div class="board" id="hbList"></div>
+  <div class="hostbar"><button class="btn big" id="hbNext" onclick="nextQuestion()"></button></div>
+</section>
+
+<!-- ============ HOST: ENDE ============ -->
+<section class="view" id="hfinal" hidden>
+  <h1 id="hfTitle"></h1>
+  <div class="podium" id="hfPodium"></div>
+  <div class="board" id="hfList"></div>
+  <div class="hostbar"><button class="btn light" onclick="exportResults()">Resultate (.csv)</button><button class="btn" onclick="endGame(false)">Spiel beenden</button></div>
+</section>
+
+<!-- ============ SPIELER ============ -->
+<section class="view" id="pjoin" hidden>
+  <div class="phone"><div class="center">
+    <h1>Klassenquiz</h1>
+    <div class="card" style="width:100%">
+      <label for="pName" style="margin-top:0">Dein Name</label>
+      <input type="text" id="pName" maxlength="20" autocomplete="off" placeholder="Vorname" onkeydown="if(event.key==='Enter')joinGame()">
+      <p id="pErr" class="err"></p>
+      <button class="btn big" style="width:100%" onclick="joinGame()">Beitreten</button>
+    </div>
+  </div></div>
+</section>
+<section class="view" id="pmain" hidden>
+  <div class="me"><span id="pMeName"></span><span id="pMeScore"></span></div>
+  <div class="phone" id="pBody" style="padding-top:20px"></div>
+</section>
+
+<script>
+/* ===================================================================
+   Optional: Firebase-Konfiguration fest eintragen. Dann wird der
+   QR-Code kürzer und die Einrichtung entfällt auf jedem Gerät.
+   Beispiel: const EMBEDDED_CONFIG = {apiKey:"...", projectId:"...", databaseURL:"https://..."};
+   =================================================================== */
+const EMBEDDED_CONFIG = {
+  apiKey: "AIzaSyDRW0UNpj8lEm_T2Mg1QdxCoKOKSvDDqEE",
+  projectId: "klassenquiz-714e2",
+  databaseURL: "https://klassenquiz-714e2-default-rtdb.europe-west1.firebasedatabase.app"
+};
+
+const $ = s => document.querySelector(s);
+const SHAPES = ['▲','◆','●','■'];
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+function show(id){ document.querySelectorAll('.view').forEach(v => v.hidden = v.id !== id); window.scrollTo(0,0); }
+function copyText(t, btn){
+  const done = () => { if(btn){ const o = btn.textContent; btn.textContent = '✓ Kopiert'; setTimeout(()=>btn.textContent=o,1500);} };
+  if (navigator.clipboard) navigator.clipboard.writeText(t).then(done, () => fallbackCopy(t, done)); else fallbackCopy(t, done);
+}
+function fallbackCopy(t, done){ const ta=document.createElement('textarea'); ta.value=t; document.body.appendChild(ta); ta.select(); try{document.execCommand('copy');done();}catch(e){} ta.remove(); }
+const store = {
+  get(k, d){ try{ const v = localStorage.getItem(k); return v ? JSON.parse(v) : d; }catch(e){ return d; } },
+  set(k, v){ try{ localStorage.setItem(k, JSON.stringify(v)); }catch(e){} }
+};
+const b64e = s => btoa(unescape(encodeURIComponent(s))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
+const b64d = s => decodeURIComponent(escape(atob(s.replace(/-/g,'+').replace(/_/g,'/'))));
+
+/* ---------------- Konfiguration ---------------- */
+function parseConfig(txt){
+  const out = {};
+  try { const j = JSON.parse(txt); if (j && typeof j === 'object') Object.assign(out, j); } catch(e) {
+    const re = /["']?(\w+)["']?\s*:\s*["']([^"']+)["']/g; let m;
+    while ((m = re.exec(txt))) out[m[1]] = m[2];
+  }
+  return out;
+}
+function compactCfg(c){ return { apiKey:c.apiKey, projectId:c.projectId, databaseURL:c.databaseURL }; }
+function getCfg(){
+  if (EMBEDDED_CONFIG) return EMBEDDED_CONFIG;
+  const h = location.hash.match(/c=([A-Za-z0-9_-]+)/);
+  if (h) { try { return JSON.parse(b64d(h[1])); } catch(e){} }
+  return store.get('kq_cfg', null);
+}
+let db = null, offset = 0;
+const SV = () => firebase.database.ServerValue.TIMESTAMP;
+const now = () => Date.now() + offset;
+function initFb(cfg){
+  if (!window.firebase) throw new Error('Firebase konnte nicht geladen werden (Internet?).');
+  if (!firebase.apps.length) firebase.initializeApp(compactCfg(cfg));
+  db = firebase.database();
+  db.ref('.info/serverTimeOffset').on('value', s => offset = s.val() || 0);
+}
+async function saveConfig(){
+  const c = parseConfig($('#cfgIn').value);
+  if ($('#cfgDb').value.trim()) c.databaseURL = $('#cfgDb').value.trim();
+  const err = $('#cfgErr'); err.textContent = '';
+  if (!c.apiKey || !c.projectId) { err.textContent = 'apiKey oder projectId nicht gefunden. Bitte den ganzen Block einfügen.'; return; }
+  if (!c.databaseURL) { err.textContent = 'databaseURL fehlt. Bitte im Feld darunter ergänzen.'; return; }
+  try {
+    if (firebase.apps.length) await firebase.app().delete();
+    initFb(c);
+    const t = db.ref('games/_test');
+    await Promise.race([t.set({ok:true}), new Promise((_,r)=>setTimeout(()=>r(new Error('Zeitüberschreitung')),8000))]);
+    await t.remove();
+    store.set('kq_cfg', compactCfg(c));
+    initEditor(); show('editor');
+  } catch(e) {
+    err.textContent = 'Verbindung fehlgeschlagen: ' + (e.message || e) + '. Prüfe databaseURL und ob die Regeln veröffentlicht sind.';
+  }
+}
+
+/* ---------------- Quiz-Bibliothek / Editor ---------------- */
+let LIB = {}, Q = null, curId = null;
+const blankQ = () => ({ q:'', a:['','','',''], c:0, t:20 });
+const SAMPLE = { title:'Beispiel: Werkstoffe', questions:[
+  { q:'Welcher Werkstoff ist ein Nichteisenmetall?', a:['Baustahl S235','Aluminium','Grauguss','Werkzeugstahl'], c:1, t:20 },
+  { q:'Wofür steht die Abkürzung HSS?', a:['Hochleistungs-Schnellarbeitsstahl','Hartmetall-Schneidstoff','Hochfester Stahl','Härtbarer Sonderstahl'], c:0, t:20 },
+  { q:'Was beschreibt die Zugfestigkeit Rm?', a:['Die Härte an der Oberfläche','Die maximale Spannung bis zum Bruch','Die Dehnung bei Raumtemperatur','Die Kerbschlagarbeit'], c:1, t:30 }
+]};
+function uid(){ return Date.now().toString(36) + Math.random().toString(36).slice(2,6); }
+function initEditor(){
+  LIB = store.get('kq_lib', {});
+  if (!Object.keys(LIB).length) { const id = uid(); LIB[id] = JSON.parse(JSON.stringify(SAMPLE)); store.set('kq_lib', LIB); }
+  curId = store.get('kq_cur', null);
+  if (!LIB[curId]) curId = Object.keys(LIB)[0];
+  loadQuiz(curId);
+}
+function save(){ LIB[curId] = Q; store.set('kq_lib', LIB); store.set('kq_cur', curId); renderLib(); $('#qCount').textContent = Q.questions.length + ' Fragen'; }
+function renderLib(){
+  const sel = $('#libSel');
+  sel.innerHTML = Object.entries(LIB).map(([id,q]) => `<option value="${id}" ${id===curId?'selected':''}>${esc(q.title||'(ohne Titel)')} · ${q.questions.length} Fragen</option>`).join('');
+}
+function loadQuiz(id){ curId = id; Q = LIB[id]; $('#qTitle').value = Q.title || ''; save(); renderQs(); }
+function newQuiz(){ curId = uid(); LIB[curId] = { title:'Neues Quiz', questions:[blankQ()] }; loadQuiz(curId); }
+function dupQuiz(){ const id = uid(); LIB[id] = JSON.parse(JSON.stringify(Q)); LIB[id].title += ' (Kopie)'; loadQuiz(id); }
+function delQuiz(){
+  if (!confirm('Quiz «' + (Q.title||'') + '» wirklich löschen?')) return;
+  delete LIB[curId];
+  if (!Object.keys(LIB).length) { LIB[uid()] = { title:'Neues Quiz', questions:[blankQ()] }; }
+  loadQuiz(Object.keys(LIB)[0]);
+}
+function renderQs(){
+  $('#qList').innerHTML = Q.questions.map((x,i) => `
+    <div class="q">
+      <div class="qhead"><span class="qnum">Frage ${i+1}</span><span class="grow"></span>
+        <select onchange="Q.questions[${i}].t=+this.value;save()" style="width:auto;padding:6px 8px" title="Zeit">
+          ${[10,15,20,30,45,60,90,120].map(s=>`<option value="${s}" ${x.t==s?'selected':''}>${s} s</option>`).join('')}
+        </select>
+        <button class="iconbtn" title="nach oben" onclick="moveQ(${i},-1)">↑</button>
+        <button class="iconbtn" title="nach unten" onclick="moveQ(${i},1)">↓</button>
+        <button class="iconbtn" title="löschen" onclick="delQ(${i})">🗑</button>
+      </div>
+      <textarea style="min-height:56px" placeholder="Frage" oninput="Q.questions[${i}].q=this.value;save()">${esc(x.q)}</textarea>
+      <div class="ans">${x.a.map((a,j)=>`
+        <div class="ansin c${j}"><span class="shape">${SHAPES[j]}</span>
+          <input type="text" value="${esc(a)}" placeholder="Antwort ${j+1}${j>1?' (optional)':''}" oninput="Q.questions[${i}].a[${j}]=this.value;save()">
+          <input type="radio" name="c${i}" title="richtige Antwort" ${x.c===j?'checked':''} onchange="Q.questions[${i}].c=${j};save()">
+        </div>`).join('')}
+      </div>
+      <div class="small" style="margin-top:6px">Richtige Antwort mit dem Kreis rechts markieren.</div>
+    </div>`).join('');
+  save();
+}
+function addQ(){ Q.questions.push(blankQ()); renderQs(); }
+function delQ(i){ Q.questions.splice(i,1); renderQs(); }
+function moveQ(i,d){ const j=i+d; if(j<0||j>=Q.questions.length) return; const a=Q.questions; [a[i],a[j]]=[a[j],a[i]]; renderQs(); }
+function tab(t){ $('#paneAi').hidden = t!=='ai'; $('#paneFile').hidden = t!=='file'; $('#tabAi').classList.toggle('on',t==='ai'); $('#tabFile').classList.toggle('on',t==='file'); }
+
+function buildPrompt(){
+  const n = +$('#nQ').value || 10, lvl = $('#lvl').value, src = $('#srcText').value.trim();
+  return `Erstelle aus dem untenstehenden Text ${n} Multiple-Choice-Quizfragen für ein Live-Quiz im Unterricht (Zielgruppe: ${lvl}).
+
+Vorgaben:
+- Jede Frage hat genau 4 Antworten, genau eine ist richtig.
+- Falsche Antworten sind plausibel und fachlich sinnvoll, keine Scherzantworten.
+- Fragen höchstens 120 Zeichen, Antworten höchstens 60 Zeichen (werden auf dem Handy angezeigt).
+- Die Position der richtigen Antwort zufällig verteilen.
+- Nur Inhalte verwenden, die im Text vorkommen.
+- Schweizer Rechtschreibung (ss statt ß).
+- "zeit" = Sekunden zum Antworten (20 für einfache, 30 für Rechen- oder Leseaufgaben).
+- "richtig" = Position der richtigen Antwort, gezählt ab 0.
+
+Gib ausschliesslich JSON in genau diesem Format zurück, ohne weiteren Text:
+{"titel":"...","fragen":[{"frage":"...","antworten":["...","...","...","..."],"richtig":0,"zeit":20}]}
+
+Text:
+"""
+${src || '(HIER DEN TEXT EINFÜGEN)'}
+"""`;
+}
+function copyPrompt(btn){
+  if (!$('#srcText').value.trim() && !confirm('Es ist noch kein Text eingefügt. Trotzdem den Auftrag kopieren?')) return;
+  copyText(buildPrompt(), btn);
+}
+function normalizeQuiz(raw){
+  const list = raw.questions || raw.fragen || (Array.isArray(raw) ? raw : null);
+  if (!Array.isArray(list) || !list.length) throw new Error('Keine Fragen gefunden.');
+  const qs = list.map((x,i) => {
+    const a = (x.a || x.antworten || x.answers || []).map(String).slice(0,4);
+    while (a.length < 4) a.push('');
+    let c = x.c ?? x.richtig ?? x.correct ?? 0;
+    if (typeof c === 'string' && !/^\d+$/.test(c)) c = a.indexOf(c);
+    c = +c; if (!(c>=0 && c<4)) c = 0;
+    const q = String(x.q || x.frage || x.question || '').trim();
+    if (!q) throw new Error('Frage ' + (i+1) + ' hat keinen Text.');
+    return { q, a, c, t: +(x.t || x.zeit || x.time) || 20 };
+  });
+  return { title: raw.title || raw.titel || '', questions: qs };
+}
+function extractJson(txt){
+  const s = Math.min(...['{','['].map(ch => { const k = txt.indexOf(ch); return k<0?Infinity:k; }));
+  const e = Math.max(txt.lastIndexOf('}'), txt.lastIndexOf(']'));
+  if (s === Infinity || e < s) throw new Error('Kein JSON gefunden.');
+  return JSON.parse(txt.slice(s, e+1));
+}
+function importAi(replace){
+  const err = $('#aiErr'); err.textContent = '';
+  try {
+    const nq = normalizeQuiz(extractJson($('#aiIn').value));
+    if (replace) { Q.questions = nq.questions; if (nq.title) { Q.title = nq.title; $('#qTitle').value = nq.title; } }
+    else Q.questions = Q.questions.filter(x => x.q.trim()).concat(nq.questions);
+    $('#aiIn').value = ''; renderQs();
+    err.style.color = 'var(--ok)'; err.textContent = '✓ ' + nq.questions.length + ' Fragen übernommen. Unten prüfen und anpassen.';
+  } catch(e) { err.style.color = ''; err.textContent = 'Import fehlgeschlagen: ' + e.message; }
+}
+function download(name, text, type){ const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([text],{type})); a.download=name; a.click(); setTimeout(()=>URL.revokeObjectURL(a.href),2000); }
+const fname = s => (s||'quiz').replace(/[^\wäöüÄÖÜ -]/g,'').trim().replace(/\s+/g,'_') || 'quiz';
+function exportQuiz(){ download(fname(Q.title)+'.json', JSON.stringify(Q,null,2), 'application/json'); }
+function importFile(inp){
+  const f = inp.files[0]; if (!f) return;
+  f.text().then(t => { const nq = normalizeQuiz(JSON.parse(t)); const id = uid(); LIB[id] = { title: nq.title || f.name.replace(/\.json$/,''), questions: nq.questions }; loadQuiz(id); })
+   .catch(e => alert('Datei konnte nicht gelesen werden: ' + e.message));
+  inp.value = '';
+}
+function validQuiz(){
+  const errs = [];
+  const qs = Q.questions.filter(x => x.q.trim() || x.a.some(a=>a.trim()));
+  if (!qs.length) errs.push('Das Quiz hat keine Fragen.');
+  qs.forEach((x,i) => {
+    if (!x.q.trim()) errs.push(`Frage ${i+1}: Fragetext fehlt.`);
+    if (x.a.filter(a=>a.trim()).length < 2) errs.push(`Frage ${i+1}: mindestens 2 Antworten nötig.`);
+    if (!x.a[x.c] || !x.a[x.c].trim()) errs.push(`Frage ${i+1}: die als richtig markierte Antwort ist leer.`);
+  });
+  return { errs, quiz: { title: Q.title || 'Quiz', questions: qs } };
+}
+
+/* ---------------- HOST: Spielablauf ---------------- */
+let G = null, joinURL = '', tick = null;
+const gref = (p='') => db.ref('games/' + G.code + (p ? '/' + p : ''));
+async function startGame(){
+  const { errs, quiz } = validQuiz();
+  $('#startErr').textContent = errs.slice(0,3).join(' ');
+  if (errs.length) return;
+  const code = String(Math.floor(100000 + Math.random()*900000));
+  const prev = store.get('kq_last', null);
+  if (prev) db.ref('games/'+prev).remove().catch(()=>{});
+  try {
+    await db.ref('games/'+code).set({ status:'lobby', title: quiz.title, total: quiz.questions.length, created: SV() });
+  } catch(e) { $('#startErr').textContent = 'Spiel konnte nicht erstellt werden: ' + e.message; return; }
+  store.set('kq_last', code);
+  G = { code, quiz, idx:-1, players:{}, answers:{}, qStart:0 };
+  gref('players').on('value', s => { G.players = s.val() || {}; renderLobby(); hostCount(); });
+  joinURL = location.origin + location.pathname + '?join=' + code + (EMBEDDED_CONFIG ? '' : '#c=' + b64e(JSON.stringify(compactCfg(getCfg()))));
+  $('#qr').innerHTML = '';
+  new QRCode($('#qr'), { text: joinURL, width: 340, height: 340, correctLevel: QRCode.CorrectLevel.L });
+  $('#lobTitle').textContent = quiz.title; $('#lobCode').textContent = code;
+  show('lobby');
+}
+function renderLobby(){
+  const ps = Object.entries(G.players);
+  $('#lobN').textContent = ps.length;
+  $('#lobPlayers').innerHTML = ps.map(([id,p]) => `<span class="chip" title="entfernen" onclick="kick('${id}')">${esc(p.name)}</span>`).join('');
+  $('#btnGo').disabled = !ps.length;
+}
+function kick(id){ if (G.idx < 0 && confirm('«' + G.players[id].name + '» entfernen?')) gref('players/'+id).remove(); }
+function ansCells(q, opts={}){
+  return q.a.map((a,j) => a.trim() ? `<div class="ha c${j} ${opts.reveal && j!==q.c ? 'dim':''}"><span class="shape">${SHAPES[j]}</span><span>${esc(a)}</span>${opts.reveal ? `<span class="cnt">${opts.counts[j]}</span>${j===q.c?'<span class="tick">✔</span>':''}` : ''}</div>` : '').join('');
+}
+async function nextQuestion(){
+  clearInterval(tick);
+  G.idx++;
+  if (G.idx >= G.quiz.questions.length) return finish();
+  const q = G.quiz.questions[G.idx];
+  G.answers = {}; G.revealed = false;
+  await gref().update({ status:'question', idx: G.idx, q: { text:q.q, a:q.a, t:q.t }, qStart: SV(), reveal: null });
+  G.qStart = (await gref('qStart').once('value')).val();
+  $('#hqNum').textContent = `Frage ${G.idx+1} von ${G.quiz.questions.length}`;
+  $('#hqText').textContent = q.q;
+  $('#hqAns').innerHTML = ansCells(q);
+  $('#hqMid').innerHTML = ''; $('#hqTimer').style.visibility = 'visible'; $('#hqBarWrap').style.visibility = 'visible';
+  $('#hqBtns').innerHTML = `<button class="btn light" onclick="reveal()">Überspringen ⏭</button>`;
+  $('#hqCount').textContent = '0';
+  show('hq');
+  if (G.ansRef) G.ansRef.off();
+  G.ansRef = gref('answers/' + G.idx);
+  G.ansRef.on('value', s => { G.answers = s.val() || {}; hostCount(); });
+  const endAt = G.qStart + q.t*1000;
+  const upd = () => {
+    const left = Math.max(0, endAt - now());
+    $('#hqTimer').textContent = Math.ceil(left/1000);
+    $('#hqBar').style.width = (left / (q.t*10)) + '%';
+    if (left <= 0) reveal();
+  };
+  upd(); tick = setInterval(upd, 200);
+}
+function hostCount(){
+  if (!G || G.idx < 0 || G.revealed) return;
+  const n = Object.keys(G.answers).filter(id => G.players[id]).length;
+  $('#hqCount').textContent = n;
+  const total = Object.keys(G.players).length;
+  if (total && n >= total) reveal();
+}
+function scoreFor(correct, elapsedMs, limitS){
+  if (!correct) return 0;
+  const f = Math.min(Math.max(elapsedMs / (limitS*1000), 0), 1);
+  return Math.round(1000 - 500*f);
+}
+async function reveal(){
+  if (G.revealed) return; G.revealed = true;
+  clearInterval(tick); if (G.ansRef) G.ansRef.off();
+  const q = G.quiz.questions[G.idx];
+  const snap = (await gref('answers/'+G.idx).once('value')).val() || {};
+  const counts = [0,0,0,0], upd = {};
+  for (const [id, p] of Object.entries(G.players)) {
+    const a = snap[id];
+    const ok = !!a && a.c === q.c;
+    if (a && a.c>=0 && a.c<4) counts[a.c]++;
+    const gain = ok ? scoreFor(true, (a.t||G.qStart) - G.qStart, q.t) : 0;
+    upd[`players/${id}/score`] = (p.score||0) + gain;
+    upd[`players/${id}/gain`] = gain;
+    upd[`players/${id}/streak`] = ok ? (p.streak||0)+1 : 0;
+    upd[`players/${id}/correct`] = (p.correct||0) + (ok?1:0);
+  }
+  upd.reveal = { c: q.c, counts };
+  upd.status = 'reveal';
+  await gref().update(upd);
+  $('#hqAns').innerHTML = ansCells(q, { reveal:true, counts });
+  $('#hqTimer').style.visibility = 'hidden'; $('#hqBarWrap').style.visibility = 'hidden';
+  $('#hqBtns').innerHTML = `<button class="btn big" onclick="showBoard()">Rangliste ▶</button>`;
+}
+function ranked(){ return Object.entries(G.players).map(([id,p]) => ({id,...p})).sort((a,b) => (b.score||0)-(a.score||0) || a.name.localeCompare(b.name)); }
+async function showBoard(){
+  await gref().update({ status:'board' });
+  const r = ranked();
+  $('#hbList').innerHTML = r.slice(0,5).map((p,i) => `<div class="brow" style="animation-delay:${i*0.08}s"><span class="rk">${i+1}</span><span class="nm">${esc(p.name)}${p.streak>=3?' 🔥':''}</span><span class="gain">${p.gain?'+'+p.gain:''}</span><span>${p.score||0}</span></div>`).join('');
+  $('#hbNext').textContent = G.idx+1 >= G.quiz.questions.length ? 'Endergebnis 🏆' : 'Nächste Frage ▶';
+  show('hboard');
+}
+async function finish(){
+  clearInterval(tick);
+  await gref().update({ status:'final' });
+  const r = ranked();
+  $('#hfTitle').textContent = 'Endergebnis · ' + G.quiz.title;
+  const order = [1,0,2], h = [150,210,110];
+  $('#hfPodium').innerHTML = order.map(i => r[i] ? `<div class="pod"><div class="pn">${esc(r[i].name)}</div><div class="ps">${r[i].score} Punkte</div><div class="blk" style="height:${h[i===0?1:i===1?0:2]}px">${i+1}</div></div>` : '').join('');
+  $('#hfList').innerHTML = r.slice(3).map((p,i) => `<div class="brow" style="font-size:20px;padding:10px 16px"><span class="rk">${i+4}</span><span class="nm">${esc(p.name)}</span><span class="small">${p.correct||0}/${G.quiz.questions.length} richtig</span><span>${p.score||0}</span></div>`).join('');
+  show('hfinal');
+}
+function exportResults(){
+  const n = G.quiz.questions.length;
+  const rows = [['Rang','Name','Punkte','Richtig','Fragen']].concat(ranked().map((p,i)=>[i+1,p.name,p.score||0,p.correct||0,n]));
+  download(fname(G.quiz.title)+'_Resultate.csv', '﻿' + rows.map(r=>r.map(v=>'"'+String(v).replace(/"/g,'""')+'"').join(';')).join('\r\n'), 'text/csv');
+}
+async function endGame(confirmIt){
+  if (confirmIt && !confirm('Spiel abbrechen?')) return;
+  clearInterval(tick);
+  try { gref('players').off(); if (G.ansRef) G.ansRef.off(); await gref().remove(); } catch(e){}
+  store.set('kq_last', null);
+  G = null; show('editor');
+}
+
+/* ---------------- SPIELER ---------------- */
+let P = null, lastKey = '', ptick = null;
+function startPlayer(code){
+  P = { code, id: sessionStorage.getItem('kq_pid_'+code), game:null, my:{} };
+  try { P.my = JSON.parse(sessionStorage.getItem('kq_my_'+code)) || {}; } catch(e){}
+  db.ref('games/'+code).on('value', s => {
+    P.game = s.val();
+    if (!P.game) { if (lastKey.startsWith('final')) return; pMsg('Dieses Spiel existiert nicht (mehr).', 'Bitte den QR-Code erneut scannen.'); return; }
+    if (P.id && P.game.players && P.game.players[P.id]) renderPlayer();
+    else if (P.id) { P.id = null; sessionStorage.removeItem('kq_pid_'+code); show('pjoin'); }
+    else show('pjoin');
+  });
+  show('pjoin');
+}
+async function joinGame(){
+  const name = $('#pName').value.trim().replace(/\s+/g,' ');
+  const err = $('#pErr'); err.textContent = '';
+  if (!name) { err.textContent = 'Bitte einen Namen eingeben.'; return; }
+  if (!P.game) { err.textContent = 'Spiel nicht gefunden.'; return; }
+  if (P.game.status === 'final') { err.textContent = 'Das Spiel ist bereits beendet.'; return; }
+  const taken = Object.values(P.game.players || {}).some(p => p.name.toLowerCase() === name.toLowerCase());
+  if (taken) { err.textContent = 'Dieser Name ist schon vergeben.'; return; }
+  const ref = db.ref('games/'+P.code+'/players').push();
+  try { await ref.set({ name, score:0, gain:0, streak:0, correct:0 }); }
+  catch(e) { err.textContent = 'Beitritt fehlgeschlagen: ' + e.message; return; }
+  P.id = ref.key; sessionStorage.setItem('kq_pid_'+P.code, P.id);
+  renderPlayer();
+}
+function pMsg(title, sub){ show('pmain'); $('#pMeName').textContent=''; $('#pMeScore').textContent=''; $('#pBody').innerHTML = `<div class="center"><div class="status">${esc(title)}</div><div>${esc(sub||'')}</div></div>`; }
+function myRank(){
+  const arr = Object.entries(P.game.players||{}).map(([id,p])=>({id,...p})).sort((a,b)=>(b.score||0)-(a.score||0) || a.name.localeCompare(b.name));
+  return { rank: arr.findIndex(x=>x.id===P.id)+1, total: arr.length };
+}
+function renderPlayer(){
+  const g = P.game, me = g && g.players && g.players[P.id];
+  if (!me) return;
+  show('pmain');
+  $('#pMeName').textContent = me.name;
+  $('#pMeScore').textContent = (me.score||0) + ' Punkte';
+  const key = g.status + ':' + (g.idx ?? '') + ':' + (g.status==='question' && P.my[g.idx]!==undefined ? 'a' : '');
+  if (key === lastKey && g.status !== 'board' && g.status !== 'reveal') return;
+  lastKey = key; clearInterval(ptick);
+  const body = $('#pBody');
+  if (g.status === 'lobby') {
+    body.innerHTML = `<div class="center"><div class="huge">👋</div><div class="status">Du bist dabei!</div><div>Siehst du deinen Namen auf dem Bildschirm?<br>Gleich geht's los.</div><div class="spinner"></div></div>`;
+  } else if (g.status === 'question') {
+    if (P.my[g.idx] !== undefined) {
+      body.innerHTML = `<div class="center"><div class="huge">${SHAPES[P.my[g.idx]]}</div><div class="status">Antwort gesendet</div><div>Warte auf die anderen …</div><div class="spinner"></div></div>`;
+      return;
+    }
+    const q = { text: g.q.text, t: g.q.t, a: [0,1,2,3].map(j => (g.q.a && g.q.a[j]) || '') };
+    body.innerHTML = `<div class="small" style="color:#c9c4f2">Frage ${g.idx+1} von ${g.total} · <span id="pT"></span></div>
+      <div class="pq mt">${esc(q.text)}</div>
+      <div class="pa">${q.a.map((a,j)=> a.trim() ? `<button class="c${j}" onclick="answer(${j})"><span class="shape">${SHAPES[j]}</span><span>${esc(a)}</span></button>` : '').join('')}</div>`;
+    const endAt = (g.qStart||now()) + q.t*1000;
+    const upd = () => { const l = Math.max(0, Math.ceil((endAt-now())/1000)); const el = $('#pT'); if (el) el.textContent = l + ' s'; if (l<=0) clearInterval(ptick); };
+    upd(); ptick = setInterval(upd, 250);
+  } else if (g.status === 'reveal' || g.status === 'board') {
+    const mine = P.my[g.idx], rv = g.reveal || {};
+    const ok = mine !== undefined && mine === rv.c;
+    const { rank, total } = myRank();
+    const head = mine === undefined ? ['⏱','Keine Antwort','bad'] : ok ? ['✔','Richtig!','ok'] : ['✖','Leider falsch','bad'];
+    body.innerHTML = `<div class="center">
+      <div class="result ${head[2]}"><div class="huge">${head[0]}</div><div class="status">${head[1]}</div>${ok?`<div style="font-size:22px;font-weight:700">+${me.gain} Punkte${me.streak>=3?' · 🔥 '+me.streak+'er-Serie':''}</div>`:''}</div>
+      ${!ok && rv.c!==undefined && g.q ? `<div>Richtig war: <b>${SHAPES[rv.c]} ${esc((g.q.a||{})[rv.c]||'')}</b></div>` : ''}
+      <div class="status mt">Platz ${rank} von ${total}</div><div>${me.score||0} Punkte</div></div>`;
+  } else if (g.status === 'final') {
+    const { rank, total } = myRank();
+    const medal = ['🥇','🥈','🥉'][rank-1] || '🎉';
+    body.innerHTML = `<div class="center"><div class="huge">${medal}</div><div class="status">Platz ${rank} von ${total}</div><div style="font-size:22px">${me.score||0} Punkte · ${me.correct||0} von ${g.total} richtig</div><div class="mt">Danke fürs Mitspielen!</div></div>`;
+  }
+}
+function answer(j){
+  const g = P.game;
+  if (g.status !== 'question' || P.my[g.idx] !== undefined) return;
+  P.my[g.idx] = j; sessionStorage.setItem('kq_my_'+P.code, JSON.stringify(P.my));
+  if (navigator.vibrate) navigator.vibrate(30);
+  db.ref(`games/${P.code}/answers/${g.idx}/${P.id}`).set({ c:j, t: SV() });
+  renderPlayer();
+}
+
+/* ---------------- Start ---------------- */
+(function boot(){
+  const join = new URLSearchParams(location.search).get('join');
+  const cfg = getCfg();
+  if (join) {
+    if (!cfg) { pMsg('Link unvollständig', 'Bitte den QR-Code erneut scannen.'); return; }
+    try { initFb(cfg); startPlayer(join); } catch(e) { pMsg('Verbindung fehlgeschlagen', e.message); }
+    return;
+  }
+  if (!cfg) { show('setup'); return; }
+  try { initFb(cfg); initEditor(); show('editor'); } catch(e) { show('setup'); $('#cfgErr').textContent = e.message; }
+})();
+window.addEventListener('beforeunload', e => { if (G && $('#hfinal').hidden) { e.preventDefault(); e.returnValue=''; } });
+</script>
+</body>
+</html>
