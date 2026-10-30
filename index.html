@@ -3,131 +3,183 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#26215C">
 <title>Klassenquiz</title>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <style>
 :root{
-  --bg:#1b1640; --bg2:#262056; --card:#ffffff; --ink:#1d1d2b; --muted:#6b6b80; --line:#e3e3ee;
-  --accent:#6c4cff; --ok:#1fa35b; --bad:#d8344a;
-  --a0:#e21b3c; --a1:#1368ce; --a2:#d89e00; --a3:#26890c;
-  --r:14px;
+  --bg:#26215C; --bg2:#2E2870; --line:#3C3489; --soft:#AFA9EC; --pale:#EEEDFE; --brand:#7F77DD;
+  --card:#ffffff; --ink:#26215C; --muted:#6b6890; --field:#e4e2f3;
+  --okc:#1D9E75; --bad:#E24B4A;
+  --a0:#A32D2D; --a0d:#791F1F; --a0t:#FCEBEB;
+  --a1:#185FA5; --a1d:#0C447C; --a1t:#E6F1FB;
+  --a2:#854F0B; --a2d:#633806; --a2t:#FAEEDA;
+  --a3:#3B6D11; --a3d:#27500A; --a3t:#EAF3DE;
+  --r:12px;
 }
 *{box-sizing:border-box}
 html,body{margin:0;min-height:100%}
-body{background:linear-gradient(160deg,var(--bg),var(--bg2));color:#fff;font:16px/1.4 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
-.view{min-height:100vh;padding:24px 16px;display:flex;flex-direction:column;align-items:center}
+body{background:var(--bg);color:var(--pale);font:16px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;-webkit-font-smoothing:antialiased}
+button{font:inherit}
+.view{min-height:100vh;display:flex;flex-direction:column}
 .view[hidden]{display:none}
-.wrap{width:100%;max-width:980px}
-h1{font-size:28px;margin:0 0 6px} h2{font-size:22px;margin:0 0 12px}
-.sub{color:#c9c4f2;margin:0 0 18px}
-.card{background:var(--card);color:var(--ink);border-radius:var(--r);padding:18px;margin-bottom:14px;box-shadow:0 6px 24px rgba(0,0,0,.25)}
-.card h3{margin:0 0 10px;font-size:17px}
-label{font-weight:600;font-size:14px;display:block;margin:10px 0 4px}
-input[type=text],input[type=number],textarea,select{width:100%;padding:10px 12px;border:1.5px solid var(--line);border-radius:10px;font:inherit;color:var(--ink);background:#fff}
+.emo{font-family:"Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif;line-height:1}
+
+/* App-Leiste */
+.topbar{display:flex;align-items:center;gap:10px;padding:12px 20px;border-bottom:1px solid var(--line);min-height:56px}
+.logo{width:28px;height:28px;border-radius:8px;background:var(--brand);color:var(--bg);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:15px;flex:none}
+.brand{font-weight:600;font-size:15px}
+.crumb{color:var(--soft);font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.spacer{flex:1}
+.meta{color:var(--soft);font-size:14px;white-space:nowrap}
+.progress{height:3px;background:var(--line)}
+.progress>div{height:3px;background:var(--soft);transition:width .4s}
+.main{flex:1;width:100%;max-width:1240px;margin:0 auto;padding:24px 20px 96px;display:flex;flex-direction:column}
+
+/* Buttons */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;border:0;border-radius:10px;padding:11px 18px;font-weight:600;font-size:15px;cursor:pointer;background:var(--brand);color:#fff;line-height:1.1}
+.btn:hover{filter:brightness(1.08)} .btn:disabled{opacity:.45;cursor:default;filter:none}
+.btn.ghost{background:#efedfb;color:#3C3489}
+.btn.quiet{background:rgba(255,255,255,.08);color:var(--pale);border:1px solid var(--line)}
+.btn.quiet:hover{background:rgba(255,255,255,.14)}
+.btn.danger{background:#fbe9ea;color:#A32D2D}
+.btn.big{font-size:18px;padding:15px 26px}
+.hostbar{position:fixed;right:20px;bottom:20px;display:flex;gap:10px;z-index:5}
+.hostbar.left{right:auto;left:20px}
+.opt{display:inline-flex;align-items:center;gap:10px;font-weight:600;font-size:14px;color:var(--ink)}
+.switch{position:relative;width:46px;height:26px;flex:none}
+.switch input{opacity:0;width:100%;height:100%;margin:0;position:absolute;inset:0;cursor:pointer;z-index:1}
+.switch .sl{position:absolute;inset:0;background:#d6d3ec;border-radius:999px;transition:background .2s}
+.switch .sl:before{content:"";position:absolute;width:20px;height:20px;left:3px;top:3px;background:#fff;border-radius:50%;transition:transform .2s}
+.switch input:checked+.sl{background:#534AB7}
+.switch input:checked+.sl:before{transform:translateX(20px)}
+.activebar{border:2px solid var(--brand);background:#f6f5fe}
+.activebar .pinmini{font-size:22px;font-weight:800;letter-spacing:3px;color:var(--ink)}
+
+/* Editor (helle Karten) */
+.card{background:var(--card);color:var(--ink);border-radius:var(--r);padding:20px;margin-bottom:14px}
+.card h3{margin:0 0 12px;font-size:16px}
+label{font-weight:600;font-size:13px;display:block;margin:12px 0 5px;color:var(--ink)}
+input[type=text],input[type=number],textarea,select{width:100%;padding:10px 12px;border:1.5px solid var(--field);border-radius:9px;font:inherit;color:var(--ink);background:#fff}
 textarea{min-height:90px;resize:vertical}
-input:focus,textarea:focus,select:focus{outline:none;border-color:var(--accent)}
-.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;border:0;border-radius:10px;padding:11px 18px;font:600 15px/1 inherit;cursor:pointer;background:var(--accent);color:#fff}
-.btn:hover{filter:brightness(1.08)} .btn:disabled{opacity:.5;cursor:default}
-.btn.ghost{background:#eeeaff;color:var(--accent)}
-.btn.light{background:rgba(255,255,255,.14);color:#fff}
-.btn.danger{background:#fde8eb;color:var(--bad)}
-.btn.big{font-size:20px;padding:16px 28px}
+input:focus,textarea:focus,select:focus{outline:none;border-color:var(--brand)}
 .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
 .row.end{justify-content:flex-end}
 .grow{flex:1}
 .small{font-size:13px;color:var(--muted)}
 .mt{margin-top:12px}
-code,pre{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:13px}
-pre{background:#f4f3fa;padding:10px;border-radius:8px;white-space:pre-wrap;word-break:break-all;margin:6px 0}
+pre{background:#f4f3fa;padding:10px;border-radius:8px;white-space:pre-wrap;word-break:break-all;margin:6px 0;font-size:13px}
+code{font-size:13px}
 ol.steps li{margin-bottom:8px}
-/* editor */
-.q{border:1.5px solid var(--line);border-radius:12px;padding:12px;margin-bottom:12px}
+.tabs{display:flex;gap:6px;margin-bottom:14px;flex-wrap:wrap}
+.tabs button{border:0;background:#f1f0f8;color:var(--ink);padding:9px 14px;border-radius:9px;font-weight:600;font-size:14px;cursor:pointer}
+.tabs button.on{background:var(--ink);color:#fff}
+.err{color:var(--bad);font-weight:600;font-size:14px}
+.q{border:1.5px solid var(--field);border-radius:12px;padding:14px;margin-bottom:12px}
 .qhead{display:flex;gap:8px;align-items:center;margin-bottom:8px}
-.qnum{font-weight:700;color:var(--accent)}
+.qnum{font-weight:700;color:#534AB7;font-size:14px}
 .ans{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px}
-.ansin{display:flex;align-items:center;gap:6px;border-radius:10px;padding:4px 6px 4px 8px}
-.ansin input[type=text]{border:0;padding:8px}
-.ansin input[type=radio]{width:20px;height:20px;accent-color:#fff}
-.c0{background:var(--a0)}.c1{background:var(--a1)}.c2{background:var(--a2)}.c3{background:var(--a3)}
-.shape{color:#fff;font-size:18px;width:22px;text-align:center}
-.iconbtn{background:#f1f0f8;border:0;border-radius:8px;width:34px;height:34px;cursor:pointer;font-size:15px}
+.ansin{display:flex;align-items:center;gap:6px;border-radius:10px;padding:4px 8px 4px 6px}
+.ansin .emo{width:30px;height:30px;border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:17px;flex:none}
+.ansin input[type=text]{border:0;padding:8px;background:transparent;color:inherit}
+.ansin input[type=text]::placeholder{color:inherit;opacity:.6}
+.ansin input[type=radio]{width:20px;height:20px;accent-color:#fff;flex:none}
+.c0{background:var(--a0);color:var(--a0t)}.c1{background:var(--a1);color:var(--a1t)}.c2{background:var(--a2);color:var(--a2t)}.c3{background:var(--a3);color:var(--a3t)}
+.c0 .emo{background:var(--a0d)}.c1 .emo{background:var(--a1d)}.c2 .emo{background:var(--a2d)}.c3 .emo{background:var(--a3d)}
+.iconbtn{background:#f1f0f8;border:0;border-radius:8px;width:34px;height:34px;cursor:pointer;font-size:15px;color:var(--ink)}
 .iconbtn:hover{background:#e4e1f6}
-.tabs{display:flex;gap:6px;margin-bottom:12px}
-.tabs button{border:0;background:#f1f0f8;color:var(--ink);padding:9px 14px;border-radius:9px;font:600 14px inherit;cursor:pointer}
-.tabs button.on{background:var(--accent);color:#fff}
-.err{color:var(--bad);font-weight:600}
-/* lobby */
-.lobby{display:grid;grid-template-columns:auto 1fr;gap:28px;align-items:start;width:100%;max-width:1200px}
-#qr{background:#fff;padding:14px;border-radius:var(--r);display:inline-block}
-.code{font-size:56px;font-weight:800;letter-spacing:6px}
+
+/* Lobby */
+.lobby{display:grid;grid-template-columns:auto 1fr;gap:40px;align-items:start}
+.qrbox{background:#fff;padding:16px;border-radius:16px;display:inline-block}
+.label{color:var(--soft);font-size:13px;font-weight:600;letter-spacing:.06em;text-transform:uppercase}
+.pin{font-size:60px;font-weight:800;letter-spacing:8px;line-height:1.1;margin:4px 0 6px}
 .players{display:flex;flex-wrap:wrap;gap:10px;margin-top:14px}
-.chip{background:rgba(255,255,255,.15);padding:9px 14px;border-radius:999px;font-weight:700;font-size:18px;cursor:pointer;animation:pop .25s}
-.chip:hover{background:var(--bad)}
-@keyframes pop{from{transform:scale(.6);opacity:0}to{transform:scale(1);opacity:1}}
-/* host question */
-.qtext{background:#fff;color:var(--ink);border-radius:var(--r);padding:22px;font-size:34px;font-weight:700;text-align:center;width:100%;max-width:1200px}
-.mid{display:flex;justify-content:space-between;align-items:center;width:100%;max-width:1200px;margin:20px 0}
-.timer{width:110px;height:110px;border-radius:50%;background:var(--accent);display:flex;align-items:center;justify-content:center;font-size:44px;font-weight:800}
-.counter{text-align:center;font-size:20px}
-.counter b{display:block;font-size:44px}
-.hans{display:grid;grid-template-columns:1fr 1fr;gap:14px;width:100%;max-width:1200px}
-.ha{border-radius:var(--r);padding:22px;font-size:26px;font-weight:700;display:flex;align-items:center;gap:14px;min-height:96px;transition:opacity .3s}
-.ha .shape{font-size:30px;width:34px}
-.ha.dim{opacity:.28}
-.ha .cnt{margin-left:auto;font-size:22px;background:rgba(0,0,0,.2);padding:4px 12px;border-radius:999px}
-.ha .tick{font-size:30px}
-.bar{height:10px;background:rgba(255,255,255,.2);border-radius:5px;overflow:hidden;width:100%;max-width:1200px;margin-top:16px}
-.bar>div{height:100%;background:#fff;transition:width .25s linear}
-/* board */
-.board{width:100%;max-width:800px}
-.brow{display:flex;align-items:center;gap:14px;background:#fff;color:var(--ink);border-radius:12px;padding:14px 18px;margin-bottom:10px;font-size:24px;font-weight:700;animation:pop .3s both}
-.brow .rk{width:40px;color:var(--accent)}
-.brow .nm{flex:1}
-.brow .gain{font-size:16px;color:var(--ok);font-weight:700}
-.podium{display:flex;align-items:flex-end;justify-content:center;gap:16px;margin:24px 0}
-.pod{text-align:center;width:200px}
-.pod .blk{background:#fff;color:var(--ink);border-radius:12px 12px 0 0;display:flex;align-items:center;justify-content:center;font-size:48px;font-weight:800}
-.pod .pn{font-size:24px;font-weight:800;margin-bottom:6px;word-break:break-word}
-.pod .ps{color:#c9c4f2;margin-bottom:8px}
-.hostbar{position:fixed;right:16px;bottom:16px;display:flex;gap:10px}
-/* player */
-.phone{width:100%;max-width:480px;flex:1;display:flex;flex-direction:column}
+.chip{display:flex;align-items:center;gap:8px;background:var(--bg2);border:1px solid var(--line);padding:5px 14px 5px 5px;border-radius:999px;font-weight:600;font-size:17px;cursor:pointer;animation:pop .25s}
+.chip:hover{border-color:var(--bad)}
+.hint{background:var(--bg2);border:1px solid var(--line);border-radius:10px;padding:10px 14px;color:var(--soft);font-size:14px;margin-top:16px;max-width:560px}
+@keyframes pop{from{transform:scale(.7);opacity:0}to{transform:scale(1);opacity:1}}
+
+/* Frage (Host) */
+.qtext{background:var(--pale);color:var(--ink);border-radius:14px;padding:26px;font-size:clamp(22px,3vw,36px);font-weight:700;text-align:center;line-height:1.25}
+.mid{display:flex;justify-content:space-between;align-items:center;margin:22px 0;gap:20px}
+.ring{position:relative;width:96px;height:96px;flex:none}
+.ring svg{transform:rotate(-90deg)}
+.ring span{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:34px;font-weight:800}
+.answered{display:flex;flex-wrap:wrap;justify-content:center;flex:1;min-height:44px;align-items:center}
+.answered>*{margin-left:-8px;animation:pop .25s}
+.counter{text-align:right;flex:none}
+.counter b{font-size:40px;line-height:1}
+.counter small{display:block;color:var(--soft);font-size:14px}
+.counter .of{font-size:20px;color:var(--soft);font-weight:600}
+.hans{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.ha{border-radius:14px;padding:18px 20px;font-size:clamp(18px,2.2vw,26px);font-weight:700;display:flex;align-items:center;gap:16px;min-height:92px;transition:opacity .3s}
+.ha .emo{width:52px;height:52px;border-radius:11px;display:flex;align-items:center;justify-content:center;font-size:30px;flex:none}
+.ha.dim{opacity:.3}
+.ha .cnt{margin-left:auto;font-size:20px;background:rgba(0,0,0,.22);padding:4px 14px;border-radius:999px;white-space:nowrap}
+.ha .tick{font-size:28px}
+
+/* Rangliste */
+.board{width:100%;max-width:820px;margin:0 auto}
+.brow{display:flex;align-items:center;gap:14px;background:var(--pale);color:var(--ink);border-radius:12px;padding:10px 18px;margin-bottom:10px;font-size:22px;font-weight:700;animation:pop .3s both}
+.brow .rk{width:34px;color:#534AB7}
+.brow .nm{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.brow .gain{font-size:15px;color:var(--okc)}
+.btitle{font-size:28px;font-weight:700;text-align:center;margin:8px 0 24px}
+.podium{display:flex;align-items:flex-end;justify-content:center;gap:18px;margin:10px 0 28px}
+.pod{text-align:center;width:210px}
+.pod .blk{background:var(--pale);color:var(--ink);border-radius:12px 12px 0 0;display:flex;align-items:flex-start;justify-content:center;padding-top:10px;font-size:40px;font-weight:800}
+.pod .pn{font-size:22px;font-weight:800;margin:6px 0 2px;word-break:break-word}
+.pod .ps{color:var(--soft);margin-bottom:10px}
+
+/* Handy */
+.phone{width:100%;max-width:480px;margin:0 auto;flex:1;display:flex;flex-direction:column;padding:16px}
+.me{display:flex;align-items:center;gap:10px;padding:10px 16px;border-bottom:1px solid var(--line);font-weight:600}
+.me .pts{margin-left:auto;color:var(--soft)}
+.pq{font-size:19px;font-weight:700;line-height:1.3;margin:6px 0 4px}
 .pa{display:grid;grid-template-rows:repeat(4,1fr);gap:10px;flex:1;margin-top:12px}
-.pa button{border:0;border-radius:var(--r);color:#fff;font:700 19px/1.25 inherit;display:flex;align-items:center;gap:12px;padding:14px 16px;text-align:left;cursor:pointer;min-height:70px}
-.pa button .shape{font-size:26px;width:30px}
+.pa button{border:0;border-radius:14px;font-weight:700;font-size:18px;display:flex;align-items:center;gap:14px;padding:12px 14px;text-align:left;cursor:pointer;min-height:68px}
+.pa button .emo{width:44px;height:44px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:26px;flex:none}
 .pa button:active{transform:scale(.97)}
-.pq{background:rgba(255,255,255,.12);border-radius:12px;padding:14px;font-size:18px;font-weight:700}
-.center{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:10px}
-.huge{font-size:64px;line-height:1}
+.center{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:12px}
+.huge{font-size:60px;line-height:1}
 .status{font-size:26px;font-weight:800}
-.result.ok{background:var(--ok)} .result.bad{background:var(--bad)}
-.result{border-radius:var(--r);padding:26px;width:100%}
-.me{position:fixed;top:0;left:0;right:0;display:flex;justify-content:space-between;padding:8px 14px;background:rgba(0,0,0,.25);font-weight:700;font-size:14px}
-.spinner{width:42px;height:42px;border:5px solid rgba(255,255,255,.25);border-top-color:#fff;border-radius:50%;animation:spin 1s linear infinite}
+.result{border-radius:16px;padding:26px;width:100%}
+.result.ok{background:var(--okc)} .result.bad{background:var(--a0)}
+.spinner{width:38px;height:38px;border:4px solid var(--line);border-top-color:var(--soft);border-radius:50%;animation:spin 1s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
+.pcard{background:var(--card);color:var(--ink);border-radius:16px;padding:20px;width:100%}
+.abrow{display:flex;align-items:center;gap:8px;margin-bottom:8px}
+.abrow .l{width:64px;font-size:13px;font-weight:600;color:var(--muted)}
+.abrow .v{flex:1;text-align:center;font-weight:600;font-size:15px}
+.abrow button{width:42px;height:38px;border:0;border-radius:9px;background:#f1f0f8;color:var(--ink);font-size:20px;cursor:pointer}
+.abrow button:active{background:#e4e1f6}
+
 @media (max-width:760px){
-  .lobby{grid-template-columns:1fr}
-  .ans{grid-template-columns:1fr}
-  .qtext{font-size:22px}.ha{font-size:18px;min-height:64px}
-  .hans{grid-template-columns:1fr}
+  .hostbar.left{left:12px;bottom:70px}
+  .lobby{grid-template-columns:1fr;gap:20px;text-align:center}
+  .lobby .players{justify-content:center}
+  .ans,.hans{grid-template-columns:1fr}
+  .pin{font-size:44px}
+  .ha{min-height:64px}
+  .hostbar{right:12px;bottom:12px}
 }
 </style>
 </head>
 <body>
 
 <!-- ============ EINRICHTUNG ============ -->
-<section class="view" id="setup" hidden><div class="wrap">
-  <h1>Einrichtung (einmalig)</h1>
-  <p class="sub">Damit die Handys der Lernenden mit deinem Laptop kommunizieren können, braucht die App eine kostenlose Firebase-Datenbank von Google.</p>
+<section class="view" id="setup" hidden>
+  <div class="topbar"><div class="logo">K</div><span class="brand">Klassenquiz</span><span class="crumb">· Einrichtung</span></div>
+  <div class="main" style="max-width:980px">
   <div class="card">
-    <h3>Schritt für Schritt (ca. 15 Minuten)</h3>
+    <h3>Firebase verbinden (einmalig)</h3>
     <ol class="steps">
-      <li>Öffne <b>console.firebase.google.com</b> und melde dich mit einem Google-Konto an.</li>
-      <li><b>«Projekt erstellen»</b> → Name z.B. <i>klassenquiz</i> → Google Analytics <b>deaktivieren</b> → erstellen.</li>
-      <li>Links im Menü: <b>Build → Realtime Database → «Datenbank erstellen»</b>. Standort: <b>Belgien (europe-west1)</b>. Modus: <b>«Im gesperrten Modus starten»</b>.</li>
-      <li>In der Datenbank den Tab <b>«Regeln»</b> öffnen, alles ersetzen durch den folgenden Text und <b>«Veröffentlichen»</b>:
+      <li><b>console.firebase.google.com</b> öffnen, Projekt erstellen (Analytics aus).</li>
+      <li><b>Realtime Database</b> erstellen, Standort <b>Belgien (europe-west1)</b>, gesperrter Modus.</li>
+      <li>Tab <b>«Regeln»</b> ersetzen durch:
 <pre id="rulesTxt">{
   "rules": {
     ".read": false,
@@ -137,33 +189,25 @@ ol.steps li{margin-bottom:8px}
     }
   }
 }</pre>
-        <button class="btn ghost" onclick="copyText($('#rulesTxt').textContent,this)">Regeln kopieren</button>
-      </li>
-      <li>Links oben auf das <b>Zahnrad → Projekteinstellungen</b>. Unten bei «Meine Apps» auf das Symbol <b>&lt;/&gt;</b> (Web) klicken → Name eingeben → <b>«App registrieren»</b> (Hosting nicht anhaken).</li>
-      <li>Es erscheint ein Code-Block mit <code>const firebaseConfig = { ... }</code>. Diesen ganzen Block kopieren und hier unten einfügen.</li>
+        <button class="btn ghost" onclick="copyText($('#rulesTxt').textContent,this)">Regeln kopieren</button></li>
+      <li>Projekteinstellungen → Web-App <b>&lt;/&gt;</b> registrieren → Block <code>const firebaseConfig = {…}</code> kopieren.</li>
     </ol>
-  </div>
-  <div class="card">
     <label for="cfgIn">Firebase-Konfiguration einfügen</label>
-    <textarea id="cfgIn" placeholder='const firebaseConfig = {
-  apiKey: "...",
-  authDomain: "...",
-  databaseURL: "https://...firebasedatabase.app",
-  projectId: "...",
-  ...
-};'></textarea>
-    <p class="small">Fehlt <code>databaseURL</code>? Dann wurde die App vor der Datenbank registriert. Die URL steht oben in der Realtime Database (beginnt mit https:// und endet auf firebasedatabase.app oder firebaseio.com) und kann hier ergänzt werden:</p>
-    <input type="text" id="cfgDb" placeholder="https://klassenquiz-default-rtdb.europe-west1.firebasedatabase.app">
+    <textarea id="cfgIn" placeholder='const firebaseConfig = { apiKey: "...", databaseURL: "https://...", projectId: "..." };'></textarea>
+    <label for="cfgDb">databaseURL (falls oben nicht enthalten)</label>
+    <input type="text" id="cfgDb" placeholder="https://...firebasedatabase.app">
     <p id="cfgErr" class="err"></p>
     <div class="row end"><button class="btn" onclick="saveConfig()">Speichern und testen</button></div>
   </div>
-</div></section>
+  </div>
+</section>
 
 <!-- ============ EDITOR ============ -->
-<section class="view" id="editor" hidden><div class="wrap">
-  <div class="row"><div class="grow"><h1>Klassenquiz</h1><p class="sub">Fragen erstellen, bearbeiten und live mit der Klasse spielen.</p></div>
-    <button class="btn light" onclick="show('setup')">⚙ Firebase</button></div>
-
+<section class="view" id="editor" hidden>
+  <div class="topbar"><div class="logo">K</div><span class="brand">Klassenquiz</span><span class="crumb">· Quizze</span><span class="spacer"></span>
+    <button class="btn quiet" onclick="show('setup')" title="Firebase-Einstellungen">⚙ Einstellungen</button></div>
+  <div class="main" style="max-width:980px">
+  <div class="card activebar" id="activeBar" hidden></div>
   <div class="card">
     <div class="row">
       <div class="grow"><label for="libSel" style="margin-top:0">Gespeicherte Quizze</label>
@@ -177,10 +221,10 @@ ol.steps li{margin-bottom:8px}
   </div>
 
   <div class="card">
-    <div class="tabs"><button id="tabAi" class="on" onclick="tab('ai')">1 · Fragen aus Text (KI)</button><button id="tabFile" onclick="tab('file')">Datei importieren / exportieren</button></div>
+    <div class="tabs"><button id="tabAi" class="on" onclick="tab('ai')">Fragen aus Text (KI)</button><button id="tabFile" onclick="tab('file')">Datei importieren / exportieren</button></div>
     <div id="paneAi">
-      <label for="srcText" style="margin-top:0">Quelltext (z.B. Theorie-Abschnitt, Lernauftrag)</label>
-      <textarea id="srcText" placeholder="Text hier einfügen …" style="min-height:130px"></textarea>
+      <label for="srcText" style="margin-top:0">1 · Quelltext (z.B. Theorie-Abschnitt, Lernauftrag)</label>
+      <textarea id="srcText" placeholder="Text hier einfügen …" style="min-height:120px"></textarea>
       <div class="row mt">
         <label for="nQ" style="margin:0">Anzahl Fragen</label><input type="number" id="nQ" value="10" min="1" max="40" style="width:90px">
         <label for="lvl" style="margin:0">Niveau</label>
@@ -188,7 +232,7 @@ ol.steps li{margin-bottom:8px}
         <span class="grow"></span>
         <button class="btn" onclick="copyPrompt(this)">Auftrag für Claude kopieren</button>
       </div>
-      <p class="small">Dann in einem Claude-Chat einfügen, Antwort komplett kopieren und unten einfügen.</p>
+      <p class="small">Dann in einem Claude-Chat einfügen, Antwort über den Kopier-Button des Codeblocks kopieren und unten einfügen.</p>
       <label for="aiIn">2 · Antwort von Claude einfügen</label>
       <textarea id="aiIn" placeholder='{"titel": "...", "fragen": [ ... ]}'></textarea>
       <p id="aiErr" class="err"></p>
@@ -197,86 +241,131 @@ ol.steps li{margin-bottom:8px}
     <div id="paneFile" hidden>
       <div class="row">
         <button class="btn ghost" onclick="exportQuiz()">Quiz als Datei speichern (.json)</button>
-        <label class="btn ghost" style="margin:0">Quiz-Datei laden<input type="file" accept=".json,application/json" hidden onchange="importFile(this)"></label>
+        <label class="btn ghost" style="margin:0;color:#3C3489">Quiz-Datei laden<input type="file" accept=".json,application/json" hidden onchange="importFile(this)"></label>
       </div>
-      <p class="small mt">Quizze werden automatisch in diesem Browser gespeichert. Mit der Datei kannst du sie sichern, auf einen anderen Laptop übertragen oder mit Kollegen teilen.</p>
+      <p class="small mt">Quizze werden automatisch in diesem Browser gespeichert. Mit der Datei kannst du sie sichern, auf einen anderen Laptop übertragen oder teilen.</p>
     </div>
   </div>
 
   <div class="card">
-    <div class="row"><div class="grow"><label for="qTitle" style="margin-top:0">Titel</label><input type="text" id="qTitle" oninput="Q.title=this.value;save()"></div></div>
+    <label for="qTitle" style="margin-top:0">Titel</label><input type="text" id="qTitle" oninput="Q.title=this.value;save()">
     <div id="qList" class="mt"></div>
     <div class="row"><button class="btn ghost" onclick="addQ()">+ Frage hinzufügen</button><span class="grow"></span><span class="small" id="qCount"></span></div>
   </div>
 
-  <p id="startErr" class="err"></p>
-  <div class="row end" style="margin-bottom:40px"><button class="btn big" onclick="startGame()">▶ Spiel starten</button></div>
-</div></section>
+  <div class="card">
+    <div class="row">
+      <span class="opt"><span class="switch"><input type="checkbox" id="optAv" onchange="store.set('kq_avatars',this.checked)"><span class="sl"></span></span>Avatare bauen lassen</span>
+      <span class="opt" id="keepWrap" hidden><input type="checkbox" id="optKeep" style="width:18px;height:18px;accent-color:#534AB7"> Punkte aus der letzten Runde übernehmen</span>
+      <span class="grow"></span>
+      <span class="row" id="startBtns"></span>
+    </div>
+    <p id="startErr" class="err" style="margin:10px 0 0"></p>
+  </div>
+  </div>
+</section>
 
 <!-- ============ LOBBY ============ -->
 <section class="view" id="lobby" hidden>
+  <div class="topbar"><div class="logo">K</div><span class="brand">Klassenquiz</span><span class="crumb" id="lobTitle"></span><span class="spacer"></span><span class="meta" id="lobQn"></span></div>
+  <div class="main">
   <div class="lobby">
-    <div style="text-align:center"><div id="qr"></div><div class="small" style="color:#c9c4f2;margin-top:8px">QR-Code scannen</div></div>
+    <div><div class="qrbox" id="qr"></div></div>
     <div>
-      <h1 id="lobTitle"></h1>
-      <div style="color:#c9c4f2">Spiel-PIN</div><div class="code" id="lobCode"></div>
-      <div class="row mt"><button class="btn light" onclick="copyText(joinURL,this)">Link kopieren</button></div>
-      <h2 class="mt" style="margin-top:28px"><span id="lobN">0</span> Teilnehmende</h2>
-      <div class="small" style="color:#c9c4f2">Namen anklicken, um jemanden zu entfernen.</div>
+      <div class="label">Spiel-PIN</div>
+      <div class="pin" id="lobCode"></div>
+      <div class="row"><button class="btn quiet" onclick="copyText(joinURL,this)">Link kopieren</button></div>
+      <div class="hint">📱 QR-Code scannen, <b>Vornamen oder Spitznamen</b> eingeben und einen Avatar bauen.</div>
+      <h2 style="margin:28px 0 0;font-size:22px"><span id="lobN">0</span> Teilnehmende</h2>
+      <div class="small" style="color:var(--soft)">Namen anklicken, um jemanden zu entfernen.</div>
       <div class="players" id="lobPlayers"></div>
     </div>
   </div>
-  <div class="hostbar"><button class="btn light" onclick="endGame(true)">Abbrechen</button><button class="btn big" id="btnGo" onclick="nextQuestion()">Start ▶</button></div>
+  </div>
+  <div class="hostbar left"><button class="btn quiet" onclick="goEditor()">⇄ Quiz wechseln</button><button class="btn quiet" onclick="endGame(true)">Spiel beenden</button></div>
+  <div class="hostbar"><button class="btn quiet fsbtn" onclick="toggleFs()">⛶ Vollbild</button><button class="btn big" id="btnGo" onclick="nextQuestion()">Start ▶</button></div>
 </section>
 
 <!-- ============ HOST: FRAGE / AUFLÖSUNG ============ -->
 <section class="view" id="hq" hidden>
-  <div class="small" id="hqNum" style="color:#c9c4f2;margin-bottom:8px"></div>
+  <div class="topbar"><div class="logo">K</div><span class="brand">Klassenquiz</span><span class="crumb" id="hqTitle"></span><span class="spacer"></span><span class="meta" id="hqNum"></span></div>
+  <div class="progress"><div id="hqProg"></div></div>
+  <div class="main">
   <div class="qtext" id="hqText"></div>
-  <div class="mid"><div class="timer" id="hqTimer"></div><div id="hqMid" style="flex:1"></div><div class="counter"><b id="hqCount">0</b>Antworten</div></div>
+  <div class="mid">
+    <div class="ring" id="hqRing"><svg width="96" height="96" viewBox="0 0 96 96"><circle cx="48" cy="48" r="42" fill="none" stroke="var(--line)" stroke-width="8"/><circle id="hqArc" cx="48" cy="48" r="42" fill="none" stroke="var(--soft)" stroke-width="8" stroke-linecap="round" stroke-dasharray="263.9" stroke-dashoffset="0"/></svg><span id="hqTimer"></span></div>
+    <div class="answered" id="hqAnswered"></div>
+    <div class="counter"><b id="hqCount">0</b><span class="of" id="hqOf"></span><small>Antworten</small></div>
+  </div>
   <div class="hans" id="hqAns"></div>
-  <div class="bar" id="hqBarWrap"><div id="hqBar"></div></div>
+  </div>
+  <div class="hostbar left" id="hqBtnsL"></div>
   <div class="hostbar" id="hqBtns"></div>
 </section>
 
 <!-- ============ HOST: RANGLISTE ============ -->
 <section class="view" id="hboard" hidden>
-  <h1 style="margin-bottom:20px">Rangliste</h1>
-  <div class="board" id="hbList"></div>
-  <div class="hostbar"><button class="btn big" id="hbNext" onclick="nextQuestion()"></button></div>
+  <div class="topbar"><div class="logo">K</div><span class="brand">Klassenquiz</span><span class="crumb" id="hbTitle"></span><span class="spacer"></span><span class="meta" id="hbNum"></span></div>
+  <div class="progress"><div id="hbProg"></div></div>
+  <div class="main">
+    <div class="btitle">Rangliste</div>
+    <div class="board" id="hbList"></div>
+  </div>
+  <div class="hostbar left"><button class="btn quiet" onclick="backToReveal()">◀ Zurück zur Auflösung</button><button class="btn quiet" onclick="goEditor()">⏸ Pause</button></div>
+  <div class="hostbar"><button class="btn quiet fsbtn" onclick="toggleFs()">⛶ Vollbild</button><button class="btn big" id="hbNext" onclick="nextQuestion()"></button></div>
 </section>
 
 <!-- ============ HOST: ENDE ============ -->
 <section class="view" id="hfinal" hidden>
-  <h1 id="hfTitle"></h1>
-  <div class="podium" id="hfPodium"></div>
-  <div class="board" id="hfList"></div>
-  <div class="hostbar"><button class="btn light" onclick="exportResults()">Resultate (.csv)</button><button class="btn" onclick="endGame(false)">Spiel beenden</button></div>
+  <div class="topbar"><div class="logo">K</div><span class="brand">Klassenquiz</span><span class="crumb" id="hfTitle"></span><span class="spacer"></span><span class="meta">Endergebnis</span></div>
+  <div class="main">
+    <div class="btitle">🏆 Endergebnis</div>
+    <div class="podium" id="hfPodium"></div>
+    <div class="board" id="hfList"></div>
+  </div>
+  <div class="hostbar left"><button class="btn quiet" onclick="exportResults()">Resultate (.csv)</button><button class="btn quiet" onclick="endGame(true)">Spiel beenden</button></div>
+  <div class="hostbar"><button class="btn big" onclick="goEditor()">⇄ Nächstes Quiz mit dieser Klasse</button></div>
 </section>
 
-<!-- ============ SPIELER ============ -->
+<!-- ============ SPIELER: NAME ============ -->
 <section class="view" id="pjoin" hidden>
+  <div class="topbar"><div class="logo">K</div><span class="brand">Klassenquiz</span></div>
   <div class="phone"><div class="center">
-    <h1>Klassenquiz</h1>
-    <div class="card" style="width:100%">
-      <label for="pName" style="margin-top:0">Dein Name</label>
-      <input type="text" id="pName" maxlength="20" autocomplete="off" placeholder="Vorname" onkeydown="if(event.key==='Enter')joinGame()">
+    <div class="pcard">
+      <label for="pName" style="margin-top:0;font-size:15px">Dein Name</label>
+      <input type="text" id="pName" maxlength="20" autocomplete="off" placeholder="Vorname oder Spitzname" onkeydown="if(event.key==='Enter')toBuilder()">
+      <p class="small" style="margin:8px 0 0">Bitte nur Vorname oder Spitzname, kein Nachname.</p>
       <p id="pErr" class="err"></p>
-      <button class="btn big" style="width:100%" onclick="joinGame()">Beitreten</button>
+      <div id="reclaim" hidden style="background:#f1f0f8;border-radius:10px;padding:12px;margin-bottom:12px">
+        <div style="font-weight:600;margin-bottom:8px" id="reclaimTxt"></div>
+        <div class="row"><button class="btn" onclick="reclaim()">Ja, weiterspielen</button><button class="btn ghost" onclick="$('#reclaim').hidden=true;$('#pName').select()">Anderer Name</button></div>
+      </div>
+      <button class="btn big" style="width:100%" onclick="toBuilder()">Weiter</button>
     </div>
   </div></div>
 </section>
+
+<!-- ============ SPIELER: AVATAR ============ -->
+<section class="view" id="pav" hidden>
+  <div class="topbar"><div class="logo">K</div><span class="brand">Klassenquiz</span><span class="crumb">· Avatar</span></div>
+  <div class="phone">
+    <div class="pcard">
+      <div style="text-align:center"><div id="abPrev"></div><div id="abName" style="font-weight:700;font-size:18px;margin-top:4px"></div></div>
+      <div id="abRows" class="mt"></div>
+      <button class="btn ghost" style="width:100%;margin-top:4px" onclick="abRandom()">🎲 Zufall</button>
+      <p id="pErr2" class="err"></p>
+      <button class="btn big" style="width:100%;margin-top:8px" onclick="joinGame()">Fertig, beitreten</button>
+    </div>
+  </div>
+</section>
+
+<!-- ============ SPIELER: SPIEL ============ -->
 <section class="view" id="pmain" hidden>
-  <div class="me"><span id="pMeName"></span><span id="pMeScore"></span></div>
-  <div class="phone" id="pBody" style="padding-top:20px"></div>
+  <div class="me"><span id="pMeAv"></span><span id="pMeName"></span><span class="pts" id="pMeScore"></span></div>
+  <div class="phone" id="pBody"></div>
 </section>
 
 <script>
-/* ===================================================================
-   Optional: Firebase-Konfiguration fest eintragen. Dann wird der
-   QR-Code kürzer und die Einrichtung entfällt auf jedem Gerät.
-   Beispiel: const EMBEDDED_CONFIG = {apiKey:"...", projectId:"...", databaseURL:"https://..."};
-   =================================================================== */
 const EMBEDDED_CONFIG = {
   apiKey: "AIzaSyDRW0UNpj8lEm_T2Mg1QdxCoKOKSvDDqEE",
   projectId: "klassenquiz-714e2",
@@ -284,9 +373,9 @@ const EMBEDDED_CONFIG = {
 };
 
 const $ = s => document.querySelector(s);
-const SHAPES = ['▲','◆','●','■'];
+const EMO = ['🔨','⚙️','🧲','💡'];
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-function show(id){ document.querySelectorAll('.view').forEach(v => v.hidden = v.id !== id); window.scrollTo(0,0); }
+function show(id){ document.querySelectorAll('.view').forEach(v => v.hidden = v.id !== id); try{window.scrollTo(0,0);}catch(e){} }
 function copyText(t, btn){
   const done = () => { if(btn){ const o = btn.textContent; btn.textContent = '✓ Kopiert'; setTimeout(()=>btn.textContent=o,1500);} };
   if (navigator.clipboard) navigator.clipboard.writeText(t).then(done, () => fallbackCopy(t, done)); else fallbackCopy(t, done);
@@ -386,7 +475,7 @@ function renderQs(){
       </div>
       <textarea style="min-height:56px" placeholder="Frage" oninput="Q.questions[${i}].q=this.value;save()">${esc(x.q)}</textarea>
       <div class="ans">${x.a.map((a,j)=>`
-        <div class="ansin c${j}"><span class="shape">${SHAPES[j]}</span>
+        <div class="ansin c${j}"><span class="emo">${EMO[j]}</span>
           <input type="text" value="${esc(a)}" placeholder="Antwort ${j+1}${j>1?' (optional)':''}" oninput="Q.questions[${i}].a[${j}]=this.value;save()">
           <input type="radio" name="c${i}" title="richtige Antwort" ${x.c===j?'checked':''} onchange="Q.questions[${i}].c=${j};save()">
         </div>`).join('')}
@@ -496,7 +585,7 @@ function importAi(replace){
     if (replace) { Q.questions = nq.questions; if (nq.title) { Q.title = nq.title; $('#qTitle').value = nq.title; } }
     else Q.questions = Q.questions.filter(x => x.q.trim()).concat(nq.questions);
     $('#aiIn').value = ''; renderQs();
-    err.style.color = 'var(--ok)'; err.textContent = '✓ ' + nq.questions.length + ' Fragen übernommen. Unten prüfen und anpassen.';
+    err.style.color = 'var(--okc)'; err.textContent = '✓ ' + nq.questions.length + ' Fragen übernommen. Unten prüfen und anpassen.';
   } catch(e) { err.style.color = ''; err.textContent = 'Import fehlgeschlagen: ' + e.message + ' Tipp: Antwort über den Kopier-Button des Codeblocks kopieren, nicht durch Markieren.'; }
 }
 function download(name, text, type){ const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([text],{type})); a.download=name; a.click(); setTimeout(()=>URL.revokeObjectURL(a.href),2000); }
@@ -520,79 +609,257 @@ function validQuiz(){
   return { errs, quiz: { title: Q.title || 'Quiz', questions: qs } };
 }
 
+
+/* ---------------- Avatare ---------------- */
+const AV = {
+  farbe:[["Petrol","#1D9E75","#085041"],["Koralle","#D85A30","#712B13"],["Violett","#7F77DD","#3C3489"],["Blau","#378ADD","#0C447C"],["Gelb","#EF9F27","#633806"],["Pink","#D4537E","#72243E"],["Grün","#639922","#27500A"],["Grau","#888780","#2C2C2A"]],
+  form:["Kreis","Quadrat","Sechseck","Zahnrad","Tropfen"],
+  augen:["Punkte","Gross","Fröhlich","Cool","Müde"],
+  mund:["Lächeln","Grinsen","Staunen","Gerade","Zunge"],
+  extra:["Nichts","Schutzhelm","Schutzbrille","Gehörschutz","Kappe","Krone"]
+};
+const AVK = ['farbe','form','augen','mund','extra'];
+const GEAR = (() => { let p=''; for (let i=0;i<20;i++){ const a=i/20*Math.PI*2, a2=(i+1)/20*Math.PI*2, r=i%2?62:74;
+  p += (i?'L':'M') + (100+r*Math.cos(a)).toFixed(1)+' '+(108+r*Math.sin(a)).toFixed(1) + 'L' + (100+r*Math.cos(a2)).toFixed(1)+' '+(108+r*Math.sin(a2)).toFixed(1); } return p+'Z'; })();
+function avNorm(v){ return AVK.map((k,i) => { const n = Array.isArray(v) ? Math.floor(+v[i]) : NaN; const L = AV[k].length; return n>=0 && n<L ? n : 0; }); }
+function avRandom(){ return AVK.map(k => Math.floor(Math.random()*AV[k].length)); }
+function avSvg(v, size){
+  const [fi, fo, au, mu, ex] = avNorm(v); const [, f, d] = AV.farbe[fi];
+  const shapes = [`<circle cx="100" cy="108" r="70"`, `<rect x="32" y="40" width="136" height="136" rx="22"`,
+    `<path d="M100 36 L162 72 L162 144 L100 180 L38 144 L38 72Z"`, `<path d="${GEAR}"`,
+    `<path d="M100 30 C150 80 172 110 172 132 A72 60 0 0 1 28 132 C28 110 50 80 100 30Z"`];
+  const body = shapes[fo] + ` fill="${f}" stroke="${d}" stroke-width="4" stroke-linejoin="round"/>`;
+  const E = [`<circle cx="78" cy="100" r="7" fill="${d}"/><circle cx="122" cy="100" r="7" fill="${d}"/>`,
+    `<circle cx="78" cy="100" r="15" fill="#fff"/><circle cx="122" cy="100" r="15" fill="#fff"/><circle cx="81" cy="103" r="7" fill="${d}"/><circle cx="125" cy="103" r="7" fill="${d}"/>`,
+    `<path d="M66 104 Q78 90 90 104 M110 104 Q122 90 134 104" stroke="${d}" stroke-width="5" fill="none" stroke-linecap="round"/>`,
+    `<rect x="58" y="90" width="38" height="20" rx="6" fill="${d}"/><rect x="104" y="90" width="38" height="20" rx="6" fill="${d}"/><path d="M96 98 H104" stroke="${d}" stroke-width="4"/>`,
+    `<path d="M66 100 H90 M110 100 H134" stroke="${d}" stroke-width="5" stroke-linecap="round"/><path d="M68 100 Q78 108 88 100 M112 100 Q122 108 132 100" stroke="${d}" stroke-width="3" fill="none"/>`];
+  const M = [`<path d="M80 134 Q100 150 120 134" stroke="${d}" stroke-width="5" fill="none" stroke-linecap="round"/>`,
+    `<path d="M74 130 Q100 162 126 130 Z" fill="${d}"/><path d="M80 134 Q100 140 120 134" stroke="#fff" stroke-width="4" fill="none"/>`,
+    `<ellipse cx="100" cy="140" rx="10" ry="13" fill="${d}"/>`,
+    `<path d="M82 140 H118" stroke="${d}" stroke-width="5" stroke-linecap="round"/>`,
+    `<path d="M78 134 Q100 150 122 134" stroke="${d}" stroke-width="5" fill="none" stroke-linecap="round"/><path d="M96 142 q6 16 12 0" fill="#ED93B1" stroke="${d}" stroke-width="2"/>`];
+  const X = ['',
+    `<path d="M36 70 A64 54 0 0 1 164 70 Z" fill="#FAC775" stroke="#633806" stroke-width="4" stroke-linejoin="round"/><rect x="26" y="66" width="148" height="12" rx="6" fill="#EF9F27" stroke="#633806" stroke-width="4"/><path d="M100 22 V66" stroke="#633806" stroke-width="4"/>`,
+    `<rect x="52" y="84" width="96" height="34" rx="14" fill="#B5D4F4" fill-opacity="0.75" stroke="#042C53" stroke-width="4"/><path d="M52 100 H32 M148 100 H168" stroke="#042C53" stroke-width="4"/>`,
+    `<path d="M44 66 A56 56 0 0 1 156 66" stroke="#444441" stroke-width="7" fill="none"/><rect x="20" y="80" width="26" height="44" rx="10" fill="#E24B4A" stroke="#501313" stroke-width="4"/><rect x="154" y="80" width="26" height="44" rx="10" fill="#E24B4A" stroke="#501313" stroke-width="4"/>`,
+    `<path d="M40 66 A60 46 0 0 1 160 66 Z" fill="#185FA5" stroke="#042C53" stroke-width="4"/><path d="M150 64 H190 Q190 74 176 74 H150" fill="#185FA5" stroke="#042C53" stroke-width="4"/>`,
+    `<path d="M64 60 L70 26 L86 46 L100 20 L114 46 L130 26 L136 60 Z" fill="#FAC775" stroke="#854F0B" stroke-width="4" stroke-linejoin="round"/>`];
+  return `<svg viewBox="0 0 200 200" width="${size}" height="${size}" style="flex:none;display:block" aria-hidden="true">${body}${E[au]}${M[mu]}${X[ex]}</svg>`;
+}
+
+/* ---------------- Vollbild ---------------- */
+function fsActive(){ return !!(document.fullscreenElement || document.webkitFullscreenElement); }
+function fsOn(){ try { const el = document.documentElement; const r = el.requestFullscreen || el.webkitRequestFullscreen; if (r && !fsActive()) { const p = r.call(el); if (p && p.catch) p.catch(()=>{}); } } catch(e){} }
+function fsOff(){ try { const x = document.exitFullscreen || document.webkitExitFullscreen; if (x && fsActive()) { const p = x.call(document); if (p && p.catch) p.catch(()=>{}); } } catch(e){} }
+function toggleFs(){ fsActive() ? fsOff() : fsOn(); }
+function fsLabel(){ document.querySelectorAll('.fsbtn').forEach(b => b.textContent = fsActive() ? '⛶ Vollbild beenden' : '⛶ Vollbild'); }
+document.addEventListener('fullscreenchange', fsLabel); document.addEventListener('webkitfullscreenchange', fsLabel);
+
+/* ---------------- Anzeige: Avatar oder Initiale ---------------- */
+function initialSvg(name, size){
+  const n = String(name||'?'); let h = 0; for (const ch of n) h = (h*31 + ch.charCodeAt(0)) >>> 0;
+  const [, f, d] = AV.farbe[h % AV.farbe.length];
+  return `<svg viewBox="0 0 200 200" width="${size}" height="${size}" style="flex:none;display:block" aria-hidden="true"><circle cx="100" cy="100" r="92" fill="${f}" stroke="${d}" stroke-width="8"/><text x="100" y="128" text-anchor="middle" font-size="90" font-weight="700" font-family="system-ui,sans-serif" fill="#fff">${esc(n.trim().charAt(0).toUpperCase())}</text></svg>`;
+}
+function pic(p, size, withAv){ return withAv ? avSvg(p.av, size) : initialSvg(p.name, size); }
+
 /* ---------------- HOST: Spielablauf ---------------- */
-let G = null, joinURL = '', tick = null;
+let G = null, joinURL = '', tick = null, busy = false;
 const gref = (p='') => db.ref('games/' + G.code + (p ? '/' + p : ''));
-async function startGame(){
+const DAY = 24*3600*1000;
+const activeInfo = () => store.get('kq_active', null);
+function saveActive(){ if (G) store.set('kq_active', { code: G.code, quiz: G.quiz }); }
+/* Schützt vor Doppelklicks: eine Aktion läuft nie zweimal gleichzeitig */
+async function once1(fn){ if (busy) return; busy = true; try { await fn(); } finally { busy = false; } }
+
+async function cleanupOld(){
+  try {
+    const keep = (activeInfo() || {}).code;
+    const idx = (await db.ref('games/_index').once('value')).val() || {};
+    const lim = now() - DAY, jobs = [];
+    for (const [c, t] of Object.entries(idx)) if (c !== keep && (typeof t !== 'number' || t < lim)) jobs.push(db.ref('games/'+c).remove(), db.ref('games/_index/'+c).remove());
+    await Promise.all(jobs);
+  } catch(e) {}
+}
+const touch = () => db.ref('games/_index/'+G.code).set(SV()).catch(()=>{});
+
+/* ----- Editor-Zustand: laufendes Spiel ----- */
+async function renderActiveBar(){
+  const bar = $('#activeBar');
+  let info = null;
+  if (G) info = { code: G.code, title: G.quiz.title, n: Object.keys(G.players).length };
+  else if (activeInfo() && db) {
+    const a = activeInfo();
+    try {
+      const g = (await db.ref('games/'+a.code).once('value')).val();
+      if (g) info = { code: a.code, title: (a.quiz||{}).title || g.title, n: Object.keys(g.players||{}).length };
+      else store.set('kq_active', null);
+    } catch(e) {}
+  }
+  bar.hidden = !info;
+  $('#keepWrap').hidden = !info;
+  if (info) bar.innerHTML = `<div class="row"><div class="grow"><div class="small">Laufendes Spiel · gespeichert</div><div class="row" style="gap:14px;margin-top:2px"><span class="pinmini">${info.code}</span><span style="font-weight:600">${esc(info.title)}</span><span class="small">${info.n} Teilnehmende verbunden</span></div></div>
+    <button class="btn" onclick="resumeGame()">▶ Fortsetzen</button><button class="btn danger" onclick="endGame(true)">Beenden</button></div>`;
+  $('#startBtns').innerHTML = info
+    ? `<button class="btn ghost" onclick="startGame(true)">Neues Spiel (neuer QR-Code)</button><button class="btn big" onclick="switchQuiz()">▶ Mit gleicher Klasse starten</button>`
+    : `<button class="btn big" onclick="startGame(false)">▶ Spiel starten</button>`;
+  $('#optAv').checked = store.get('kq_avatars', true) !== false;
+}
+function goEditor(){ clearInterval(tick); fsOff(); show('editor'); renderActiveBar(); }
+
+/* G aus Firebase wiederherstellen (nach Neuladen des Browsers) */
+async function loadActive(){
+  if (G) return true;
+  const a = activeInfo(); if (!a) return false;
+  const g = (await db.ref('games/'+a.code).once('value')).val();
+  if (!g) { store.set('kq_active', null); return false; }
+  G = { code: a.code, quiz: a.quiz, idx: g.idx ?? -1, players: g.players || {}, answers: {}, avatars: g.avatars !== false, round: g.round || 0, lastReveal: g.reveal || null };
+  attachHost();
+  return true;
+}
+function attachHost(){
+  gref('players').off();
+  gref('players').on('value', s => { G.players = s.val() || {}; renderLobby(); hostCount(); });
+  joinURL = location.origin + location.pathname + '?join=' + G.code + (EMBEDDED_CONFIG ? '' : '#c=' + b64e(JSON.stringify(compactCfg(getCfg()))));
+  $('#qr').innerHTML = '';
+  new QRCode($('#qr'), { text: joinURL, width: 320, height: 320, correctLevel: QRCode.CorrectLevel.L });
+  setTitles();
+}
+function setTitles(){
+  ['#lobTitle','#hqTitle','#hbTitle','#hfTitle'].forEach(s => $(s).textContent = '· ' + G.quiz.title);
+  $('#lobQn').textContent = G.quiz.questions.length + ' Fragen';
+  $('#lobCode').textContent = G.code;
+}
+async function resumeGame(){
+  fsOn();
+  if (!(await loadActive())) { renderActiveBar(); return; }
+  const g = (await gref().once('value')).val() || {};
+  G.idx = g.idx ?? -1;
+  fsLabel();
+  if (g.status === 'question') {
+    const q = G.quiz.questions[G.idx];
+    G.revealed = false; G.qStart = g.qStart;
+    G.tStart = Date.now() - Math.max(0, now() - g.qStart);
+    showQuestionUI();
+  } else if (g.status === 'reveal') { G.revealed = true; G.lastReveal = g.reveal; showRevealUI(); }
+  else if (g.status === 'board') { G.revealed = true; G.lastReveal = g.reveal; await showBoard(); }
+  else if (g.status === 'final') { await finish(); }
+  else { renderLobby(); show('lobby'); }
+}
+
+/* ----- Neues Spiel ----- */
+async function startGame(replaceRunning){
   const { errs, quiz } = validQuiz();
   $('#startErr').textContent = errs.slice(0,3).join(' ');
   if (errs.length) return;
+  if (replaceRunning || activeInfo()) {
+    if (!confirm('Das laufende Spiel wird beendet. Alle Lernenden müssen den neuen QR-Code scannen. Fortfahren?')) return;
+    await loadActive(); if (G) await endGame(false, true);
+  }
+  fsOn();
   const code = String(Math.floor(100000 + Math.random()*900000));
-  const prev = store.get('kq_last', null);
-  if (prev) db.ref('games/'+prev).remove().catch(()=>{});
+  const avatars = $('#optAv').checked;
+  cleanupOld();
   try {
-    await db.ref('games/'+code).set({ status:'lobby', title: quiz.title, total: quiz.questions.length, created: SV() });
+    await db.ref('games/'+code).set({ status:'lobby', title: quiz.title, total: quiz.questions.length, avatars, round: 0, created: SV() });
   } catch(e) { $('#startErr').textContent = 'Spiel konnte nicht erstellt werden: ' + e.message; return; }
-  store.set('kq_last', code);
-  G = { code, quiz, idx:-1, players:{}, answers:{}, qStart:0 };
-  gref('players').on('value', s => { G.players = s.val() || {}; renderLobby(); hostCount(); });
-  joinURL = location.origin + location.pathname + '?join=' + code + (EMBEDDED_CONFIG ? '' : '#c=' + b64e(JSON.stringify(compactCfg(getCfg()))));
-  $('#qr').innerHTML = '';
-  new QRCode($('#qr'), { text: joinURL, width: 340, height: 340, correctLevel: QRCode.CorrectLevel.L });
-  $('#lobTitle').textContent = quiz.title; $('#lobCode').textContent = code;
-  show('lobby');
+  G = { code, quiz, idx:-1, players:{}, answers:{}, qStart:0, avatars, round:0 };
+  touch(); saveActive(); attachHost();
+  fsLabel(); renderLobby(); show('lobby');
 }
+
+/* ----- Quiz wechseln, Klasse bleibt eingeloggt ----- */
+async function switchQuiz(){
+  const { errs, quiz } = validQuiz();
+  $('#startErr').textContent = errs.slice(0,3).join(' ');
+  if (errs.length) return;
+  fsOn();
+  await once1(async () => {
+    if (!(await loadActive())) { renderActiveBar(); return; }
+    const keep = $('#optKeep').checked, avatars = $('#optAv').checked;
+    clearInterval(tick); if (G.ansRef) G.ansRef.off();
+    const upd = { status:'lobby', title: quiz.title, total: quiz.questions.length, avatars, round: (G.round||0) + 1,
+                  idx: null, q: null, qStart: null, reveal: null, answers: null };
+    for (const id of Object.keys(G.players)) {
+      upd[`players/${id}/gain`] = 0; upd[`players/${id}/streak`] = 0;
+      if (!keep) { upd[`players/${id}/score`] = 0; upd[`players/${id}/correct`] = 0; }
+    }
+    await gref().update(upd);
+    Object.assign(G, { quiz, idx: -1, answers: {}, avatars, round: upd.round, revealed: false, lastReveal: null });
+    touch(); saveActive(); setTitles(); fsLabel(); renderLobby(); show('lobby');
+  });
+}
+
 function renderLobby(){
+  if (!G) return;
   const ps = Object.entries(G.players);
   $('#lobN').textContent = ps.length;
-  $('#lobPlayers').innerHTML = ps.map(([id,p]) => `<span class="chip" title="entfernen" onclick="kick('${id}')">${esc(p.name)}</span>`).join('');
+  $('#lobPlayers').innerHTML = ps.map(([id,p]) => `<span class="chip" title="entfernen" onclick="kick('${id}')">${pic(p,36,G.avatars)}${esc(p.name)}</span>`).join('');
   $('#btnGo').disabled = !ps.length;
+  $('.lobby .hint').innerHTML = G.avatars ? '📱 QR-Code scannen, <b>Vornamen oder Spitznamen</b> eingeben und einen Avatar bauen.' : '📱 QR-Code scannen und <b>Vornamen oder Spitznamen</b> eingeben.';
 }
-function kick(id){ if (G.idx < 0 && confirm('«' + G.players[id].name + '» entfernen?')) gref('players/'+id).remove(); }
+function kick(id){ if (G.idx < 0 && G.players[id] && confirm('«' + G.players[id].name + '» entfernen?')) gref('players/'+id).remove(); }
 function ansCells(q, opts={}){
-  return q.a.map((a,j) => a.trim() ? `<div class="ha c${j} ${opts.reveal && j!==q.c ? 'dim':''}"><span class="shape">${SHAPES[j]}</span><span>${esc(a)}</span>${opts.reveal ? `<span class="cnt">${opts.counts[j]}</span>${j===q.c?'<span class="tick">✔</span>':''}` : ''}</div>` : '').join('');
+  return q.a.map((a,j) => a.trim() ? `<div class="ha c${j} ${opts.reveal && j!==q.c ? 'dim':''}"><span class="emo">${EMO[j]}</span><span>${esc(a)}</span>${opts.reveal ? `<span class="cnt">${opts.counts[j]}</span>${j===q.c?'<span class="tick">✔</span>':''}` : ''}</div>` : '').join('');
 }
-async function nextQuestion(){
+function setProg(){ const p = Math.round((G.idx+1) / G.quiz.questions.length * 100) + '%'; $('#hqProg').style.width = p; $('#hbProg').style.width = p;
+  const t = `Frage ${G.idx+1} / ${G.quiz.questions.length}`; $('#hqNum').textContent = t; $('#hbNum').textContent = t; }
+
+function nextQuestion(){ return once1(async () => {
   clearInterval(tick);
+  if (G.idx + 1 >= G.quiz.questions.length) { G.idx = G.quiz.questions.length; return finish(); }
   G.idx++;
-  if (G.idx >= G.quiz.questions.length) return finish();
   const q = G.quiz.questions[G.idx];
-  G.answers = {}; G.revealed = false;
+  G.answers = {}; G.revealed = false; G.lastReveal = null;
+  G.tStart = Date.now();                 // Timer läuft mit der Uhr dieses Laptops
   await gref().update({ status:'question', idx: G.idx, q: { text:q.q, a:q.a, t:q.t }, qStart: SV(), reveal: null });
   G.qStart = (await gref('qStart').once('value')).val();
-  $('#hqNum').textContent = `Frage ${G.idx+1} von ${G.quiz.questions.length}`;
+  touch();
+  showQuestionUI();
+}); }
+function showQuestionUI(){
+  const q = G.quiz.questions[G.idx], myIdx = G.idx;
+  setProg();
   $('#hqText').textContent = q.q;
   $('#hqAns').innerHTML = ansCells(q);
-  $('#hqMid').innerHTML = ''; $('#hqTimer').style.visibility = 'visible'; $('#hqBarWrap').style.visibility = 'visible';
-  $('#hqBtns').innerHTML = `<button class="btn light" onclick="reveal()">Überspringen ⏭</button>`;
-  $('#hqCount').textContent = '0';
+  $('#hqAnswered').innerHTML = '';
+  $('#hqRing').style.visibility = 'visible';
+  $('#hqBtnsL').innerHTML = `<button class="btn quiet" onclick="revealNow()">Jetzt auflösen ⏭</button>`;
+  $('#hqBtns').innerHTML = `<button class="btn quiet fsbtn" onclick="toggleFs()"></button>`; fsLabel();
+  $('#hqCount').textContent = '0'; $('#hqOf').textContent = ' / ' + Object.keys(G.players).length;
   show('hq');
   if (G.ansRef) G.ansRef.off();
   G.ansRef = gref('answers/' + G.idx);
-  G.ansRef.on('value', s => { G.answers = s.val() || {}; hostCount(); });
-  const endAt = G.qStart + q.t*1000;
-  const upd = () => {
-    const left = Math.max(0, endAt - now());
+  G.ansRef.on('value', s => { if (G && G.idx === myIdx) { G.answers = s.val() || {}; hostCount(); } });
+  const endAt = G.tStart + q.t*1000, C = 263.9;
+  clearInterval(tick);
+  const iv = setInterval(() => upd(), 200); tick = iv;
+  function upd(){
+    if (!G || G.idx !== myIdx || G.revealed) { clearInterval(iv); return; }   // alter Timer beendet sich selbst
+    const left = Math.max(0, endAt - Date.now());
     $('#hqTimer').textContent = Math.ceil(left/1000);
-    $('#hqBar').style.width = (left / (q.t*10)) + '%';
+    $('#hqArc').setAttribute('stroke-dashoffset', (C * (1 - left/(q.t*1000))).toFixed(1));
     if (left <= 0) reveal();
-  };
-  upd(); tick = setInterval(upd, 200);
+  }
+  upd();
 }
 function hostCount(){
-  if (!G || G.idx < 0 || G.revealed) return;
-  const n = Object.keys(G.answers).filter(id => G.players[id]).length;
-  $('#hqCount').textContent = n;
+  if (!G || G.idx < 0 || G.revealed || $('#hq').hidden) return;
+  const ids = Object.keys(G.answers).filter(id => G.players[id]);
   const total = Object.keys(G.players).length;
-  if (total && n >= total) reveal();
+  $('#hqCount').textContent = ids.length; $('#hqOf').textContent = ' / ' + total;
+  $('#hqAnswered').innerHTML = ids.slice(0,24).map(id => pic(G.players[id], 44, G.avatars)).join('') + (ids.length > 24 ? `<span style="margin-left:8px;color:var(--soft)">+${ids.length-24}</span>` : '');
+  if (total && ids.length >= total) reveal();
 }
+function revealNow(){ if (Date.now() - (G.tStart||0) < 1500) return; reveal(); }  // Schutz gegen Doppelklick direkt nach Fragestart
 function scoreFor(correct, elapsedMs, limitS){
   if (!correct) return 0;
   const f = Math.min(Math.max(elapsedMs / (limitS*1000), 0), 1);
   return Math.round(1000 - 500*f);
 }
 async function reveal(){
-  if (G.revealed) return; G.revealed = true;
+  if (!G || G.revealed) return; G.revealed = true;
   clearInterval(tick); if (G.ansRef) G.ansRef.off();
   const q = G.quiz.questions[G.idx];
   const snap = (await gref('answers/'+G.idx).once('value')).val() || {};
@@ -607,29 +874,40 @@ async function reveal(){
     upd[`players/${id}/streak`] = ok ? (p.streak||0)+1 : 0;
     upd[`players/${id}/correct`] = (p.correct||0) + (ok?1:0);
   }
-  upd.reveal = { c: q.c, counts };
+  G.lastReveal = { c: q.c, counts };
+  upd.reveal = G.lastReveal;
   upd.status = 'reveal';
   await gref().update(upd);
-  $('#hqAns').innerHTML = ansCells(q, { reveal:true, counts });
-  $('#hqTimer').style.visibility = 'hidden'; $('#hqBarWrap').style.visibility = 'hidden';
-  $('#hqBtns').innerHTML = `<button class="btn big" onclick="showBoard()">Rangliste ▶</button>`;
+  showRevealUI();
 }
-function ranked(){ return Object.entries(G.players).map(([id,p]) => ({id,...p})).sort((a,b) => (b.score||0)-(a.score||0) || a.name.localeCompare(b.name)); }
-async function showBoard(){
+function showRevealUI(){
+  const q = G.quiz.questions[G.idx], rv = G.lastReveal || { c: q.c, counts: [0,0,0,0] };
+  setProg();
+  $('#hqText').textContent = q.q;
+  $('#hqAns').innerHTML = ansCells(q, { reveal:true, counts: rv.counts || [0,0,0,0] });
+  $('#hqRing').style.visibility = 'hidden';
+  $('#hqBtnsL').innerHTML = `<button class="btn quiet" onclick="goEditor()">⏸ Pause</button>`;
+  $('#hqBtns').innerHTML = `<button class="btn quiet fsbtn" onclick="toggleFs()"></button><button class="btn big" onclick="showBoard()">Rangliste ▶</button>`; fsLabel();
+  show('hq');
+}
+function backToReveal(){ return once1(async () => { await gref().update({ status:'reveal' }); showRevealUI(); }); }
+function ranked(){ return Object.entries(G.players).map(([id,p]) => ({id,...p})).sort((a,b) => (b.score||0)-(a.score||0) || String(a.name).localeCompare(String(b.name))); }
+function showBoard(){ return once1(async () => {
   await gref().update({ status:'board' });
   const r = ranked();
-  $('#hbList').innerHTML = r.slice(0,5).map((p,i) => `<div class="brow" style="animation-delay:${i*0.08}s"><span class="rk">${i+1}</span><span class="nm">${esc(p.name)}${p.streak>=3?' 🔥':''}</span><span class="gain">${p.gain?'+'+p.gain:''}</span><span>${p.score||0}</span></div>`).join('');
+  $('#hbList').innerHTML = r.slice(0,5).map((p,i) => `<div class="brow" style="animation-delay:${i*0.08}s"><span class="rk">${i+1}</span>${pic(p,44,G.avatars)}<span class="nm">${esc(p.name)}${p.streak>=3?' 🔥':''}</span><span class="gain">${p.gain?'+'+p.gain:''}</span><span>${p.score||0}</span></div>`).join('');
   $('#hbNext').textContent = G.idx+1 >= G.quiz.questions.length ? 'Endergebnis 🏆' : 'Nächste Frage ▶';
+  setProg(); fsLabel();
   show('hboard');
-}
+}); }
 async function finish(){
   clearInterval(tick);
   await gref().update({ status:'final' });
+  touch();
   const r = ranked();
-  $('#hfTitle').textContent = 'Endergebnis · ' + G.quiz.title;
-  const order = [1,0,2], h = [150,210,110];
-  $('#hfPodium').innerHTML = order.map(i => r[i] ? `<div class="pod"><div class="pn">${esc(r[i].name)}</div><div class="ps">${r[i].score} Punkte</div><div class="blk" style="height:${h[i===0?1:i===1?0:2]}px">${i+1}</div></div>` : '').join('');
-  $('#hfList').innerHTML = r.slice(3).map((p,i) => `<div class="brow" style="font-size:20px;padding:10px 16px"><span class="rk">${i+4}</span><span class="nm">${esc(p.name)}</span><span class="small">${p.correct||0}/${G.quiz.questions.length} richtig</span><span>${p.score||0}</span></div>`).join('');
+  const slots = [[1,110],[0,150],[2,80]];
+  $('#hfPodium').innerHTML = slots.map(([i,h]) => r[i] ? `<div class="pod">${pic(r[i], i===0?96:76, G.avatars).replace('display:block','display:block;margin:0 auto')}<div class="pn">${esc(r[i].name)}</div><div class="ps">${r[i].score||0} Punkte</div><div class="blk" style="height:${h}px">${i+1}</div></div>` : '').join('');
+  $('#hfList').innerHTML = r.slice(3,5).map((p,i) => `<div class="brow" style="font-size:18px;padding:8px 16px"><span class="rk">${i+4}</span>${pic(p,34,G.avatars)}<span class="nm">${esc(p.name)}</span><span class="small">${p.correct||0}/${G.quiz.questions.length} richtig</span><span>${p.score||0}</span></div>`).join('');
   show('hfinal');
 }
 function exportResults(){
@@ -637,90 +915,121 @@ function exportResults(){
   const rows = [['Rang','Name','Punkte','Richtig','Fragen']].concat(ranked().map((p,i)=>[i+1,p.name,p.score||0,p.correct||0,n]));
   download(fname(G.quiz.title)+'_Resultate.csv', '﻿' + rows.map(r=>r.map(v=>'"'+String(v).replace(/"/g,'""')+'"').join(';')).join('\r\n'), 'text/csv');
 }
-async function endGame(confirmIt){
-  if (confirmIt && !confirm('Spiel abbrechen?')) return;
+async function endGame(confirmIt, silent){
+  if (confirmIt && !confirm('Spiel beenden? Alle Lernenden werden abgemeldet.')) return;
+  if (!G) await loadActive();
   clearInterval(tick);
-  try { gref('players').off(); if (G.ansRef) G.ansRef.off(); await gref().remove(); } catch(e){}
-  store.set('kq_last', null);
-  G = null; show('editor');
+  if (G) { try { gref('players').off(); if (G.ansRef) G.ansRef.off(); await gref().remove(); await db.ref('games/_index/'+G.code).remove(); } catch(e){} }
+  store.set('kq_active', null);
+  G = null;
+  if (!silent) { fsOff(); show('editor'); renderActiveBar(); }
 }
 
 /* ---------------- SPIELER ---------------- */
-let P = null, lastKey = '', ptick = null;
+let P = null, lastKey = '', ptick = null, AB = avRandom();
+const lget = (k, d) => { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : d; } catch(e){ return d; } };
+const lset = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch(e){} };
+const myKey = g => (g.round||0) + ':' + g.idx;
 function startPlayer(code){
-  P = { code, id: sessionStorage.getItem('kq_pid_'+code), game:null, my:{} };
-  try { P.my = JSON.parse(sessionStorage.getItem('kq_my_'+code)) || {}; } catch(e){}
+  P = { code, id: lget('kq_pid_'+code, null), game:null, my: lget('kq_my_'+code, {}), building:false };
   db.ref('games/'+code).on('value', s => {
     P.game = s.val();
     if (!P.game) { if (lastKey.startsWith('final')) return; pMsg('Dieses Spiel existiert nicht (mehr).', 'Bitte den QR-Code erneut scannen.'); return; }
     if (P.id && P.game.players && P.game.players[P.id]) renderPlayer();
-    else if (P.id) { P.id = null; sessionStorage.removeItem('kq_pid_'+code); show('pjoin'); }
-    else show('pjoin');
+    else if (P.id) { P.id = null; lset('kq_pid_'+code, null); lastKey=''; show('pjoin'); }
+    else if (!P.building) show('pjoin');
   });
   show('pjoin');
 }
-async function joinGame(){
+function findByName(name){ return Object.entries((P.game && P.game.players) || {}).find(([,p]) => String(p.name).toLowerCase() === name.toLowerCase()); }
+function nameError(name){
+  if (!name) return 'Bitte einen Namen eingeben.';
+  if (!P.game) return 'Spiel nicht gefunden.';
+  return '';
+}
+function toBuilder(){
   const name = $('#pName').value.trim().replace(/\s+/g,' ');
-  const err = $('#pErr'); err.textContent = '';
-  if (!name) { err.textContent = 'Bitte einen Namen eingeben.'; return; }
-  if (!P.game) { err.textContent = 'Spiel nicht gefunden.'; return; }
-  if (P.game.status === 'final') { err.textContent = 'Das Spiel ist bereits beendet.'; return; }
-  const taken = Object.values(P.game.players || {}).some(p => p.name.toLowerCase() === name.toLowerCase());
-  if (taken) { err.textContent = 'Dieser Name ist schon vergeben.'; return; }
-  const ref = db.ref('games/'+P.code+'/players').push();
-  try { await ref.set({ name, score:0, gain:0, streak:0, correct:0 }); }
-  catch(e) { err.textContent = 'Beitritt fehlgeschlagen: ' + e.message; return; }
-  P.id = ref.key; sessionStorage.setItem('kq_pid_'+P.code, P.id);
+  const e = nameError(name); $('#pErr').textContent = e; if (e) return;
+  const hit = findByName(name);
+  if (hit) { P.reclaimId = hit[0]; $('#reclaimTxt').textContent = `«${hit[1].name}» ist schon im Spiel. Bist du das?`; $('#reclaim').hidden = false; return; }
+  P.name = name;
+  if (P.game.avatars === false) { AB = avRandom(); joinGame(); return; }
+  P.building = true;
+  $('#abName').textContent = name; abRender(); show('pav');
+}
+function reclaim(){
+  if (!P.reclaimId || !P.game.players || !P.game.players[P.reclaimId]) { $('#reclaim').hidden = true; return; }
+  P.id = P.reclaimId; lset('kq_pid_'+P.code, P.id); $('#reclaim').hidden = true; lastKey = '';
   renderPlayer();
 }
-function pMsg(title, sub){ show('pmain'); $('#pMeName').textContent=''; $('#pMeScore').textContent=''; $('#pBody').innerHTML = `<div class="center"><div class="status">${esc(title)}</div><div>${esc(sub||'')}</div></div>`; }
+function abRender(){
+  $('#abPrev').innerHTML = avSvg(AB, 150).replace('display:block','display:block;margin:0 auto');
+  $('#abRows').innerHTML = AVK.map((k,i) => `<div class="abrow"><span class="l">${k[0].toUpperCase()+k.slice(1)}</span><button aria-label="zurück" onclick="abStep(${i},-1)">‹</button><span class="v">${k==='farbe'?AV.farbe[AB[i]][0]:AV[k][AB[i]]}</span><button aria-label="weiter" onclick="abStep(${i},1)">›</button></div>`).join('');
+}
+function abStep(i,d){ const n = AV[AVK[i]].length; AB[i] = (AB[i]+d+n)%n; abRender(); }
+function abRandom(){ AB = avRandom(); abRender(); }
+async function joinGame(){
+  const err = $('#pErr2'); err.textContent = ''; $('#pErr').textContent = '';
+  if (/Android/i.test(navigator.userAgent)) fsOn();
+  const e = nameError(P.name); if (e) { err.textContent = e; return; }
+  if (findByName(P.name)) { P.building = false; show('pjoin'); $('#pErr').textContent = 'Dieser Name wurde gerade vergeben. Bitte einen anderen wählen.'; return; }
+  const ref = db.ref('games/'+P.code+'/players').push();
+  try { await ref.set({ name:P.name, av: avNorm(AB), score:0, gain:0, streak:0, correct:0 }); }
+  catch(x) { (P.building ? err : $('#pErr')).textContent = 'Beitritt fehlgeschlagen: ' + x.message; return; }
+  P.id = ref.key; P.building = false; lset('kq_pid_'+P.code, P.id);
+  renderPlayer();
+}
+function pMsg(title, sub){ show('pmain'); $('#pMeAv').innerHTML=''; $('#pMeName').textContent=''; $('#pMeScore').textContent=''; $('#pBody').innerHTML = `<div class="center"><div class="status">${esc(title)}</div><div>${esc(sub||'')}</div></div>`; }
 function myRank(){
-  const arr = Object.entries(P.game.players||{}).map(([id,p])=>({id,...p})).sort((a,b)=>(b.score||0)-(a.score||0) || a.name.localeCompare(b.name));
+  const arr = Object.entries(P.game.players||{}).map(([id,p])=>({id,...p})).sort((a,b)=>(b.score||0)-(a.score||0) || String(a.name).localeCompare(String(b.name)));
   return { rank: arr.findIndex(x=>x.id===P.id)+1, total: arr.length };
 }
 function renderPlayer(){
   const g = P.game, me = g && g.players && g.players[P.id];
   if (!me) return;
+  const withAv = g.avatars !== false;
   show('pmain');
+  $('#pMeAv').innerHTML = pic(me, 32, withAv);
   $('#pMeName').textContent = me.name;
   $('#pMeScore').textContent = (me.score||0) + ' Punkte';
-  const key = g.status + ':' + (g.idx ?? '') + ':' + (g.status==='question' && P.my[g.idx]!==undefined ? 'a' : '');
-  if (key === lastKey && g.status !== 'board' && g.status !== 'reveal') return;
+  const mk = myKey(g), answered = P.my[mk];
+  const key = g.status + ':' + mk + ':' + (g.status==='question' && answered!==undefined ? 'a' : '');
+  if (key === lastKey && g.status !== 'board' && g.status !== 'reveal' && g.status !== 'lobby') return;
   lastKey = key; clearInterval(ptick);
   const body = $('#pBody');
   if (g.status === 'lobby') {
-    body.innerHTML = `<div class="center"><div class="huge">👋</div><div class="status">Du bist dabei!</div><div>Siehst du deinen Namen auf dem Bildschirm?<br>Gleich geht's los.</div><div class="spinner"></div></div>`;
+    body.innerHTML = `<div class="center">${pic(me,130,withAv)}<div class="status">${g.round ? 'Nächste Runde!' : 'Du bist dabei!'}</div><div style="color:var(--soft)">${g.round ? esc(g.title) + '<br>Gleich geht\'s los.' : 'Siehst du dich auf dem Bildschirm?<br>Gleich geht\'s los.'}</div><div class="spinner"></div></div>`;
   } else if (g.status === 'question') {
-    if (P.my[g.idx] !== undefined) {
-      body.innerHTML = `<div class="center"><div class="huge">${SHAPES[P.my[g.idx]]}</div><div class="status">Antwort gesendet</div><div>Warte auf die anderen …</div><div class="spinner"></div></div>`;
+    if (answered !== undefined) {
+      body.innerHTML = `<div class="center"><div class="huge emo">${EMO[answered]}</div><div class="status">Antwort gesendet</div><div style="color:var(--soft)">Warte auf die anderen …</div><div class="spinner"></div></div>`;
       return;
     }
     const q = { text: g.q.text, t: g.q.t, a: [0,1,2,3].map(j => (g.q.a && g.q.a[j]) || '') };
-    body.innerHTML = `<div class="small" style="color:#c9c4f2">Frage ${g.idx+1} von ${g.total} · <span id="pT"></span></div>
-      <div class="pq mt">${esc(q.text)}</div>
-      <div class="pa">${q.a.map((a,j)=> a.trim() ? `<button class="c${j}" onclick="answer(${j})"><span class="shape">${SHAPES[j]}</span><span>${esc(a)}</span></button>` : '').join('')}</div>`;
+    body.innerHTML = `<div class="small" style="color:var(--soft)">Frage ${g.idx+1} von ${g.total} · <span id="pT"></span></div>
+      <div class="pq">${esc(q.text)}</div>
+      <div class="pa">${q.a.map((a,j)=> a.trim() ? `<button class="c${j}" onclick="answer(${j})"><span class="emo">${EMO[j]}</span><span>${esc(a)}</span></button>` : '').join('')}</div>`;
     const endAt = (g.qStart||now()) + q.t*1000;
-    const upd = () => { const l = Math.max(0, Math.ceil((endAt-now())/1000)); const el = $('#pT'); if (el) el.textContent = l + ' s'; if (l<=0) clearInterval(ptick); };
+    const upd = () => { const l = Math.min(q.t, Math.max(0, Math.ceil((endAt-now())/1000))); const el = $('#pT'); if (el) el.textContent = l + ' s'; if (l<=0) clearInterval(ptick); };
     upd(); ptick = setInterval(upd, 250);
   } else if (g.status === 'reveal' || g.status === 'board') {
-    const mine = P.my[g.idx], rv = g.reveal || {};
-    const ok = mine !== undefined && mine === rv.c;
+    const rv = g.reveal || {};
+    const ok = answered !== undefined && answered === rv.c;
     const { rank, total } = myRank();
-    const head = mine === undefined ? ['⏱','Keine Antwort','bad'] : ok ? ['✔','Richtig!','ok'] : ['✖','Leider falsch','bad'];
+    const head = answered === undefined ? ['⏱','Keine Antwort','bad'] : ok ? ['✔','Richtig!','ok'] : ['✖','Leider falsch','bad'];
     body.innerHTML = `<div class="center">
-      <div class="result ${head[2]}"><div class="huge">${head[0]}</div><div class="status">${head[1]}</div>${ok?`<div style="font-size:22px;font-weight:700">+${me.gain} Punkte${me.streak>=3?' · 🔥 '+me.streak+'er-Serie':''}</div>`:''}</div>
-      ${!ok && rv.c!==undefined && g.q ? `<div>Richtig war: <b>${SHAPES[rv.c]} ${esc((g.q.a||{})[rv.c]||'')}</b></div>` : ''}
-      <div class="status mt">Platz ${rank} von ${total}</div><div>${me.score||0} Punkte</div></div>`;
+      <div class="result ${head[2]}"><div class="huge">${head[0]}</div><div class="status">${head[1]}</div>${ok?`<div style="font-size:20px;font-weight:700">+${me.gain} Punkte${me.streak>=3?' · 🔥 '+me.streak+'er-Serie':''}</div>`:''}</div>
+      ${!ok && rv.c!==undefined && g.q ? `<div>Richtig war: <b><span class="emo">${EMO[rv.c]}</span> ${esc((g.q.a||{})[rv.c]||'')}</b></div>` : ''}
+      <div class="status mt">Platz ${rank} von ${total}</div><div style="color:var(--soft)">${me.score||0} Punkte</div></div>`;
   } else if (g.status === 'final') {
     const { rank, total } = myRank();
     const medal = ['🥇','🥈','🥉'][rank-1] || '🎉';
-    body.innerHTML = `<div class="center"><div class="huge">${medal}</div><div class="status">Platz ${rank} von ${total}</div><div style="font-size:22px">${me.score||0} Punkte · ${me.correct||0} von ${g.total} richtig</div><div class="mt">Danke fürs Mitspielen!</div></div>`;
+    body.innerHTML = `<div class="center">${pic(me,120,withAv)}<div class="huge">${medal}</div><div class="status">Platz ${rank} von ${total}</div><div style="font-size:20px">${me.score||0} Punkte · ${me.correct||0} von ${g.total} richtig</div><div class="mt" style="color:var(--soft)">Bleib eingeloggt – vielleicht kommt noch eine Runde.</div></div>`;
   }
 }
 function answer(j){
-  const g = P.game;
-  if (g.status !== 'question' || P.my[g.idx] !== undefined) return;
-  P.my[g.idx] = j; sessionStorage.setItem('kq_my_'+P.code, JSON.stringify(P.my));
+  const g = P.game, mk = myKey(g);
+  if (g.status !== 'question' || P.my[mk] !== undefined) return;
+  P.my[mk] = j; lset('kq_my_'+P.code, P.my);
   if (navigator.vibrate) navigator.vibrate(30);
   db.ref(`games/${P.code}/answers/${g.idx}/${P.id}`).set({ c:j, t: SV() });
   renderPlayer();
@@ -736,7 +1045,7 @@ function answer(j){
     return;
   }
   if (!cfg) { show('setup'); return; }
-  try { initFb(cfg); initEditor(); show('editor'); } catch(e) { show('setup'); $('#cfgErr').textContent = e.message; }
+  try { initFb(cfg); initEditor(); show('editor'); renderActiveBar(); } catch(e) { show('setup'); $('#cfgErr').textContent = e.message; }
 })();
 window.addEventListener('beforeunload', e => { if (G && $('#hfinal').hidden) { e.preventDefault(); e.returnValue=''; } });
 </script>
